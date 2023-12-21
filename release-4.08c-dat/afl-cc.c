@@ -1,140 +1,4 @@
-/*
-   american fuzzy lop++ - compiler instrumentation wrapper
-   -------------------------------------------------------
-
-   Written by Michal Zalewski, Laszlo Szekeres and Marc Heuse
-
-   Copyright 2015, 2016 Google Inc. All rights reserved.
-   Copyright 2019-2023 AFLplusplus Project. All rights reserved.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at:
-
-     https://www.apache.org/licenses/LICENSE-2.0
-
- */
-
-#define AFL_MAIN
-
-#include "common.h"
-#include "config.h"
-#include "types.h"
-#include "debug.h"
-#include "alloc-inl.h"
-#include "llvm-alternative-coverage.h"
-
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <limits.h>
-#include <assert.h>
-#include <ctype.h>
-#include <sys/stat.h>
-
-#if (LLVM_MAJOR - 0 == 0)
-  #undef LLVM_MAJOR
-#endif
-#if !defined(LLVM_MAJOR)
-  #define LLVM_MAJOR 0
-#endif
-#if (LLVM_MINOR - 0 == 0)
-  #undef LLVM_MINOR
-#endif
-#if !defined(LLVM_MINOR)
-  #define LLVM_MINOR 0
-#endif
-
-static u8  *obj_path;                  /* Path to runtime libraries         */
-static u8 **cc_params;                 /* Parameters passed to the real CC  */
-static u32  cc_par_cnt = 1;            /* Param count, including argv0      */
-static u8   clang_mode;                /* Invoked as afl-clang*?            */
-static u8   llvm_fullpath[PATH_MAX];
-static u8   instrument_mode, instrument_opt_mode, ngram_size, ctx_k, lto_mode;
-static u8   compiler_mode, plusplus_mode, have_instr_env = 0, need_aflpplib = 0;
-static u8   have_gcc, have_llvm, have_gcc_plugin, have_lto, have_instr_list = 0;
-static u8  *lto_flag = AFL_CLANG_FLTO, *argvnull;
-static u8   debug;
-static u8   cwd[4096];
-static u8   cmplog_mode;
-u8          use_stdin;                                             /* dummy */
-static int  passthrough;
-// static u8 *march_opt = CFLAGS_OPT;
-
-enum {
-
-  INSTRUMENT_DEFAULT = 0,
-  INSTRUMENT_CLASSIC = 1,
-  INSTRUMENT_AFL = 1,
-  INSTRUMENT_PCGUARD = 2,
-  INSTRUMENT_CFG = 3,
-  INSTRUMENT_LTO = 4,
-  INSTRUMENT_LLVMNATIVE = 5,
-  INSTRUMENT_GCC = 6,
-  INSTRUMENT_CLANG = 7,
-  INSTRUMENT_OPT_CTX = 8,
-  INSTRUMENT_OPT_NGRAM = 16,
-  INSTRUMENT_OPT_CALLER = 32,
-  INSTRUMENT_OPT_CTX_K = 64,
-  INSTRUMENT_OPT_CODECOV = 128,
-
-};
-
-char instrument_mode_string[18][18] = {
-
-    "DEFAULT",
-    "CLASSIC",
-    "PCGUARD",
-    "CFG",
-    "LTO",
-    "PCGUARD-NATIVE",
-    "GCC",
-    "CLANG",
-    "CTX",
-    "CALLER",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "NGRAM",
-    ""
-
-};
-
-enum {
-
-  UNSET = 0,
-  LTO = 1,
-  LLVM = 2,
-  GCC_PLUGIN = 3,
-  GCC = 4,
-  CLANG = 5
-
-};
-
-char compiler_mode_string[7][12] = {
-
-    "AUTOSELECT", "LLVM-LTO", "LLVM", "GCC_PLUGIN",
-    "GCC",        "CLANG",    ""
-
-};
-
-u8 *getthecwd() {
-
-  if (getcwd(cwd, sizeof(cwd)) == NULL) {
-
-    static u8 fail[] = "";
-    return fail;
-
-  }
-
-  return cwd;
-
-}
+#include "afl-cc.h"
 
 /* Try to find a specific runtime we need, returns NULL on fail. */
 
@@ -377,15 +241,6 @@ void parse_fsanitize(char *string) {
   // fprintf(stderr, "new: %s\n", new);
 
 }
-
-static u8 fortify_set = 0, asan_set = 0, x_set = 0, bit_mode = 0,
-          shared_linking = 0, preprocessor_only = 0, have_unroll = 0,
-          have_o = 0, have_pic = 0, have_c = 0, partial_linking = 0,
-          non_dash = 0;
-
-#ifndef MAX_PARAMS_NUM
-  #define MAX_PARAMS_NUM 2048
-#endif
 
 static void process_params(u32 argc, char **argv) {
 
@@ -1504,6 +1359,9 @@ static void edit_params(u32 argc, char **argv, char **envp) {
 
 int main(int argc, char **argv, char **envp) {
 
+  aflcc_state_t *aflcc = malloc(sizeof(aflcc_state_t));
+  aflcc_state_init(aflcc);
+
   int   i;
   char *callname = argv[0], *ptr = NULL;
 
@@ -1532,7 +1390,7 @@ int main(int argc, char **argv, char **envp) {
   }
 
   if ((ptr = strrchr(callname, '/')) != NULL) callname = ptr + 1;
-  argvnull = (u8 *)argv[0];
+
   check_environment_vars(envp);
 
   if ((ptr = find_object("as", argv[0])) != NULL) {
