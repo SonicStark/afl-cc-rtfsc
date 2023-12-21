@@ -1362,8 +1362,10 @@ int main(int argc, char **argv, char **envp) {
   aflcc_state_t *aflcc = malloc(sizeof(aflcc_state_t));
   aflcc_state_init(aflcc);
 
+  init_callname(aflcc, argv[0]);
+
   int   i;
-  char *callname = argv[0], *ptr = NULL;
+  char *ptr = NULL;
 
   if (getenv("AFL_DEBUG")) {
 
@@ -1388,8 +1390,6 @@ int main(int argc, char **argv, char **envp) {
     if (!debug) { be_quiet = 1; }
 
   }
-
-  if ((ptr = strrchr(callname, '/')) != NULL) callname = ptr + 1;
 
   check_environment_vars(envp);
 
@@ -1512,8 +1512,6 @@ int main(int argc, char **argv, char **envp) {
     clang_mode = 1;
     compiler_mode = CLANG;
 
-    if (strcmp(callname, "afl-clang++") == 0) { plusplus_mode = 1; }
-
   }
 
   for (i = 1; i < argc; i++) {
@@ -1602,10 +1600,6 @@ int main(int argc, char **argv, char **envp) {
 
   }
 
-  if (strlen(callname) > 2 &&
-      (strncmp(callname + strlen(callname) - 2, "++", 2) == 0 ||
-       strstr(callname, "-g++") != NULL))
-    plusplus_mode = 1;
 
   if (getenv("USE_TRACE_PC") || getenv("AFL_USE_TRACE_PC") ||
       getenv("AFL_LLVM_USE_TRACE_PC") || getenv("AFL_TRACE_PC")) {

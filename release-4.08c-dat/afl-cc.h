@@ -94,6 +94,8 @@ typedef struct aflcc_state
   u8 **cc_params;                 /* Parameters passed to the real CC  */
   u32  cc_par_cnt;                /* Param count, including argv0      */
 
+  u8  *callname;
+
   u8 debug;
 
   u8 llvm_fullpath[PATH_MAX];
@@ -144,5 +146,7 @@ typedef struct aflcc_state
 void aflcc_state_init(aflcc_state_t *);
 
 u8 *getthecwd();
+
+void init_callname(aflcc_state_t *, u8 *argv0);
 
 #endif

@@ -64,3 +64,21 @@ u8 *getthecwd() {
   return cwd;
 
 }
+
+void init_callname(aflcc_state_t *aflcc, u8 *argv0) {
+
+  char *cname = NULL;
+
+  if ((cname = strrchr(argv0, '/')) != NULL)
+    cname++;
+  else
+    cname = argv0;
+
+  aflcc->callname = cname;
+
+  if (strlen(cname) > 2 &&
+      (strncmp(cname + strlen(cname) - 2, "++", 2) == 0 ||
+       strstr(cname, "-g++") != NULL))
+    aflcc->plusplus_mode = 1;
+
+}
