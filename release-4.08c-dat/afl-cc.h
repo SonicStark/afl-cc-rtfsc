@@ -149,4 +149,6 @@ u8 *getthecwd();
 
 void init_callname(aflcc_state_t *, u8 *argv0);
 
+void maybe_show_help(aflcc_state_t *, int argc, char **argv);
+
 #endif
