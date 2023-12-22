@@ -154,4 +154,22 @@ void maybe_show_help(aflcc_state_t *, int argc, char **argv);
 /* Try to find a specific runtime we need, returns NULL on fail. */
 u8 *find_object(aflcc_state_t *, u8 *obj, u8 *argv0);
 
+static inline void load_llvm_pass(aflcc_state_t *aflcc, u8 *pass) {
+
+#if LLVM_MAJOR >= 11                                /* use new pass manager */
+  #if LLVM_MAJOR < 16
+      aflcc->cc_params[aflcc->cc_par_cnt++] = "-fexperimental-new-pass-manager";
+  #endif
+      aflcc->cc_params[aflcc->cc_par_cnt++] =
+          alloc_printf("-fpass-plugin=%s/%s", aflcc->obj_path, pass);
+#else
+      aflcc->cc_params[aflcc->cc_par_cnt++] = "-Xclang";
+      aflcc->cc_params[aflcc->cc_par_cnt++] = "-load";
+      aflcc->cc_params[aflcc->cc_par_cnt++] = "-Xclang";
+      aflcc->cc_params[aflcc->cc_par_cnt++] =
+          alloc_printf("%s/%s", aflcc->obj_path, pass);
+#endif
+
+}
+
 #endif
