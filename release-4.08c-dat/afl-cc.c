@@ -1140,6 +1140,7 @@ int main(int argc, char **argv, char **envp) {
   }
 
   compiler_mode_by_callname(aflcc);
+  compiler_mode_by_environ(aflcc);
 
   for (i = 1; i < argc; i++) {
 
