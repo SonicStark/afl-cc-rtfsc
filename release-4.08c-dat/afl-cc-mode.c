@@ -109,6 +109,12 @@ void compiler_mode_by_callname(aflcc_state_t *aflcc) {
 
 void compiler_mode_by_environ(aflcc_state_t *aflcc) {
 
+  if (getenv("AFL_PASSTHROUGH") || getenv("AFL_NOOPT")) {
+
+    aflcc->passthrough = 1;
+
+  }
+
   char *ptr = getenv("AFL_CC_COMPILER");
 
   if (!ptr) return;

@@ -1023,12 +1023,6 @@ int main(int argc, char **argv, char **envp) {
 
   }
 
-  if (getenv("AFL_PASSTHROUGH") || getenv("AFL_NOOPT")) {
-
-    passthrough = 1;
-
-  }
-
   if ((ptr = find_object("as", argv[0])) != NULL) {
 
     have_gcc = 1;
