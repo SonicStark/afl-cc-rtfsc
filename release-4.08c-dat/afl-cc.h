@@ -151,4 +151,7 @@ void init_callname(aflcc_state_t *, u8 *argv0);
 
 void maybe_show_help(aflcc_state_t *, int argc, char **argv);
 
+/* Try to find a specific runtime we need, returns NULL on fail. */
+u8 *find_object(aflcc_state_t *, u8 *obj, u8 *argv0);
+
 #endif
