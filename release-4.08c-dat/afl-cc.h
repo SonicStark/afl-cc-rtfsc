@@ -98,11 +98,8 @@ typedef struct aflcc_state
 
   u8 debug;
 
-  u8 llvm_fullpath[PATH_MAX];
-
   u8 compiler_mode,
       plusplus_mode,
-      clang_mode,                 /* Invoked as afl-clang*?            */
       lto_mode;
 
   u8 *lto_flag;
@@ -172,6 +169,7 @@ static inline void load_llvm_pass(aflcc_state_t *aflcc, u8 *pass) {
 
 }
 
+void set_real_argv0(aflcc_state_t *);
 void compiler_mode_by_callname(aflcc_state_t *);
 void compiler_mode_by_environ(aflcc_state_t *);
 

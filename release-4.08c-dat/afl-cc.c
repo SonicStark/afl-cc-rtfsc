@@ -378,88 +378,14 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   }
 
-  if (plusplus_mode) {
-
-    u8 *alt_cxx = getenv("AFL_CXX");
-
-    if (!alt_cxx) {
-
-      if (compiler_mode >= GCC_PLUGIN) {
-
-        if (compiler_mode == GCC) {
-
-          alt_cxx = clang_mode ? "clang++" : "g++";
-
-        } else if (compiler_mode == CLANG) {
-
-          alt_cxx = "clang++";
-
-        } else {
-
-          alt_cxx = "g++";
-
-        }
-
-      } else {
-
-        if (USE_BINDIR)
-          snprintf(llvm_fullpath, sizeof(llvm_fullpath), "%s/clang++",
-                   LLVM_BINDIR);
-        else
-          snprintf(llvm_fullpath, sizeof(llvm_fullpath), CLANGPP_BIN);
-        alt_cxx = llvm_fullpath;
-
-      }
-
-    }
-
-    cc_params[0] = alt_cxx;
-
-  } else {
-
-    u8 *alt_cc = getenv("AFL_CC");
-
-    if (!alt_cc) {
-
-      if (compiler_mode >= GCC_PLUGIN) {
-
-        if (compiler_mode == GCC) {
-
-          alt_cc = clang_mode ? "clang" : "gcc";
-
-        } else if (compiler_mode == CLANG) {
-
-          alt_cc = "clang";
-
-        } else {
-
-          alt_cc = "gcc";
-
-        }
-
-      } else {
-
-        if (USE_BINDIR)
-          snprintf(llvm_fullpath, sizeof(llvm_fullpath), "%s/clang",
-                   LLVM_BINDIR);
-        else
-          snprintf(llvm_fullpath, sizeof(llvm_fullpath), "%s", CLANG_BIN);
-        alt_cc = llvm_fullpath;
-
-      }
-
-    }
-
-    cc_params[0] = alt_cc;
-
-  }
+  set_real_argv0(aflcc);
 
   if (compiler_mode == GCC || compiler_mode == CLANG) {
 
     cc_params[cc_par_cnt++] = "-B";
     cc_params[cc_par_cnt++] = obj_path;
 
-    if (clang_mode || compiler_mode == CLANG) {
+    if (compiler_mode == CLANG) {
 
       cc_params[cc_par_cnt++] = "-no-integrated-as";
 
@@ -1551,15 +1477,7 @@ int main(int argc, char **argv, char **envp) {
 
   if (compiler_mode == GCC) {
 
-    if (clang_mode) {
-
-      instrument_mode = INSTRUMENT_CLANG;
-
-    } else {
-
-      instrument_mode = INSTRUMENT_GCC;
-
-    }
+    instrument_mode = INSTRUMENT_GCC;
 
   }
 
