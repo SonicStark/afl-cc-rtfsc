@@ -156,3 +156,96 @@ void compiler_mode_by_environ(aflcc_state_t *aflcc) {
   }
 
 }
+
+// If it can be inferred, instrument_mode would also be set
+void compiler_mode_by_cmdline(aflcc_state_t *aflcc, int argc, char **argv) {
+
+  char *ptr = NULL;
+
+  for (int i = 1; i < argc; i++) {
+
+    if (strncmp(argv[i], "--afl", 5) == 0) {
+
+      if (!strcmp(argv[i], "--afl_noopt") || !strcmp(argv[i], "--afl-noopt")) {
+
+        aflcc->passthrough = 1;
+        argv[i] = "-g";  // we have to overwrite it, -g is always good
+        continue;
+
+      }
+
+      if (aflcc->compiler_mode && !be_quiet) {
+
+        WARNF(
+            "--afl-... compiler mode supersedes the AFL_CC_COMPILER and "
+            "symlink compiler selection!");
+
+      }
+
+      ptr = argv[i];
+      ptr += 5;
+      while (*ptr == '-')
+        ptr++;
+
+      if (strncasecmp(ptr, "LTO", 3) == 0) {
+
+        aflcc->compiler_mode = LTO;
+
+      } else if (strncasecmp(ptr, "LLVM", 4) == 0) {
+
+        aflcc->compiler_mode = LLVM;
+
+      } else if (strncasecmp(ptr, "PCGUARD", 7) == 0 ||
+
+                 strncasecmp(ptr, "PC-GUARD", 8) == 0) {
+
+        aflcc->compiler_mode = LLVM;
+        aflcc->instrument_mode = INSTRUMENT_PCGUARD;
+
+      } else if (strcasecmp(ptr, "INSTRIM") == 0 ||
+
+                 strcasecmp(ptr, "CFG") == 0) {
+
+        FATAL(
+            "InsTrim instrumentation was removed. Use a modern LLVM and "
+            "PCGUARD (default in afl-cc).\n");
+
+      } else if (strcasecmp(ptr, "AFL") == 0 ||
+
+                 strcasecmp(ptr, "CLASSIC") == 0) {
+
+        aflcc->compiler_mode = LLVM;
+        aflcc->instrument_mode = INSTRUMENT_CLASSIC;
+
+      } else if (strcasecmp(ptr, "LLVMNATIVE") == 0 ||
+
+                 strcasecmp(ptr, "NATIVE") == 0 ||
+                 strcasecmp(ptr, "LLVM-NATIVE") == 0) {
+
+        aflcc->compiler_mode = LLVM;
+        aflcc->instrument_mode = INSTRUMENT_LLVMNATIVE;
+
+      } else if (strncasecmp(ptr, "GCC_P", 5) == 0 ||
+
+                 strncasecmp(ptr, "GCC-P", 5) == 0 ||
+                 strncasecmp(ptr, "GCCP", 4) == 0) {
+
+        aflcc->compiler_mode = GCC_PLUGIN;
+
+      } else if (strcasecmp(ptr, "GCC") == 0) {
+
+        aflcc->compiler_mode = GCC;
+
+      } else if (strncasecmp(ptr, "CLANG", 5) == 0) {
+
+        aflcc->compiler_mode = CLANG;
+
+      } else
+
+        FATAL("Unknown --afl-... compiler mode: %s\n", argv[i]);
+
+    }
+
+  }
+
+}

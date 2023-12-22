@@ -172,5 +172,6 @@ static inline void load_llvm_pass(aflcc_state_t *aflcc, u8 *pass) {
 void set_real_argv0(aflcc_state_t *);
 void compiler_mode_by_callname(aflcc_state_t *);
 void compiler_mode_by_environ(aflcc_state_t *);
+void compiler_mode_by_cmdline(aflcc_state_t *, int argc, char **argv);
 
 #endif
