@@ -1071,17 +1071,23 @@ int main(int argc, char **argv, char **envp) {
 
   init_callname(aflcc, argv[0]);
 
-  int   i;
-  char *ptr = NULL;
-
   if (getenv("AFL_DEBUG")) {
 
-    debug = 1;
+    aflcc->debug = 1;
     if (strcmp(getenv("AFL_DEBUG"), "0") == 0) unsetenv("AFL_DEBUG");
 
   } else if (getenv("AFL_QUIET"))
 
     be_quiet = 1;
+
+  if ((getenv("AFL_PASSTHROUGH") || getenv("AFL_NOOPT")) && (!aflcc->debug))
+
+    be_quiet = 1;
+
+  check_environment_vars(envp);
+
+  int   i;
+  char *ptr = NULL;
 
   if (getenv("AFL_LLVM_INSTRUMENT_FILE") || getenv("AFL_LLVM_WHITELIST") ||
       getenv("AFL_LLVM_ALLOWLIST") || getenv("AFL_LLVM_DENYLIST") ||
@@ -1094,11 +1100,8 @@ int main(int argc, char **argv, char **envp) {
   if (getenv("AFL_PASSTHROUGH") || getenv("AFL_NOOPT")) {
 
     passthrough = 1;
-    if (!debug) { be_quiet = 1; }
 
   }
-
-  check_environment_vars(envp);
 
   if ((ptr = find_object("as", argv[0])) != NULL) {
 
