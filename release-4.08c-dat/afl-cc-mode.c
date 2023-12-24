@@ -554,3 +554,28 @@ void instrument_mode_by_environ(aflcc_state_t *aflcc) {
   instrument_mode_new_environ(aflcc);  
 
 }
+
+void instrument_opt_mode_mutex(aflcc_state_t *aflcc) {
+
+  if ((aflcc->instrument_opt_mode & INSTRUMENT_OPT_CTX) &&
+      (aflcc->instrument_opt_mode & INSTRUMENT_OPT_CALLER)) {
+
+    FATAL("you cannot set CTX and CALLER together");
+
+  }
+
+  if ((aflcc->instrument_opt_mode & INSTRUMENT_OPT_CTX) &&
+      (aflcc->instrument_opt_mode & INSTRUMENT_OPT_CTX_K)) {
+
+    FATAL("you cannot set CTX and K-CTX together");
+
+  }
+
+  if ((aflcc->instrument_opt_mode & INSTRUMENT_OPT_CALLER) &&
+      (aflcc->instrument_opt_mode & INSTRUMENT_OPT_CTX_K)) {
+
+    FATAL("you cannot set CALLER and K-CTX together");
+
+  }
+
+}

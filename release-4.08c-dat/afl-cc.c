@@ -1054,28 +1054,9 @@ int main(int argc, char **argv, char **envp) {
   compiler_mode_by_callname(aflcc);
   compiler_mode_by_environ(aflcc);
   compiler_mode_by_cmdline(aflcc, argc, argv);
+
   instrument_mode_by_environ(aflcc);
-
-  if ((instrument_opt_mode & INSTRUMENT_OPT_CTX) &&
-      (instrument_opt_mode & INSTRUMENT_OPT_CALLER)) {
-
-    FATAL("you cannot set CTX and CALLER together");
-
-  }
-
-  if ((instrument_opt_mode & INSTRUMENT_OPT_CTX) &&
-      (instrument_opt_mode & INSTRUMENT_OPT_CTX_K)) {
-
-    FATAL("you cannot set CTX and K-CTX together");
-
-  }
-
-  if ((instrument_opt_mode & INSTRUMENT_OPT_CALLER) &&
-      (instrument_opt_mode & INSTRUMENT_OPT_CTX_K)) {
-
-    FATAL("you cannot set CALLER and K-CTX together");
-
-  }
+  instrument_opt_mode_mutex(aflcc);
 
   if (instrument_opt_mode && instrument_mode == INSTRUMENT_DEFAULT &&
       (compiler_mode == LLVM || compiler_mode == UNSET)) {
