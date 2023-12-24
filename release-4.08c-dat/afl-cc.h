@@ -173,5 +173,6 @@ void set_real_argv0(aflcc_state_t *);
 void compiler_mode_by_callname(aflcc_state_t *);
 void compiler_mode_by_environ(aflcc_state_t *);
 void compiler_mode_by_cmdline(aflcc_state_t *, int argc, char **argv);
+void instrument_mode_by_environ(aflcc_state_t *);
 
 #endif

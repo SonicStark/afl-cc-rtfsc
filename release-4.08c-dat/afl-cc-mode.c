@@ -255,3 +255,302 @@ void compiler_mode_by_cmdline(aflcc_state_t *aflcc, int argc, char **argv) {
   }
 
 }
+
+static void instrument_mode_old_environ(aflcc_state_t *aflcc) {
+
+  if (getenv("AFL_LLVM_INSTRIM") || getenv("INSTRIM") ||
+      getenv("INSTRIM_LIB")) {
+
+    FATAL(
+        "InsTrim instrumentation was removed. Use a modern LLVM and PCGUARD "
+        "(default in afl-cc).\n");
+
+  }
+
+  if (getenv("USE_TRACE_PC") || getenv("AFL_USE_TRACE_PC") ||
+      getenv("AFL_LLVM_USE_TRACE_PC") || getenv("AFL_TRACE_PC")) {
+
+    if (aflcc->instrument_mode == 0)
+      aflcc->instrument_mode = INSTRUMENT_PCGUARD;
+    else if (aflcc->instrument_mode != INSTRUMENT_PCGUARD)
+      FATAL("you cannot set AFL_LLVM_INSTRUMENT and AFL_TRACE_PC together");
+
+  }
+
+  if (getenv("AFL_LLVM_CTX")) aflcc->instrument_opt_mode |= INSTRUMENT_OPT_CTX;
+  if (getenv("AFL_LLVM_CALLER")) aflcc->instrument_opt_mode |= INSTRUMENT_OPT_CALLER;
+
+  if (getenv("AFL_LLVM_NGRAM_SIZE")) {
+
+    aflcc->instrument_opt_mode |= INSTRUMENT_OPT_NGRAM;
+    aflcc->ngram_size = atoi(getenv("AFL_LLVM_NGRAM_SIZE"));
+    if (aflcc->ngram_size < 2 || aflcc->ngram_size > NGRAM_SIZE_MAX)
+      FATAL(
+          "NGRAM instrumentation mode must be between 2 and NGRAM_SIZE_MAX "
+          "(%u)",
+          NGRAM_SIZE_MAX);
+
+  }
+
+  if (getenv("AFL_LLVM_CTX_K")) {
+
+    aflcc->ctx_k = atoi(getenv("AFL_LLVM_CTX_K"));
+    if (aflcc->ctx_k < 1 || aflcc->ctx_k > CTX_MAX_K)
+      FATAL("K-CTX instrumentation mode must be between 1 and CTX_MAX_K (%u)",
+            CTX_MAX_K);
+    if (aflcc->ctx_k == 1) {
+
+      setenv("AFL_LLVM_CALLER", "1", 1);
+      unsetenv("AFL_LLVM_CTX_K");
+      aflcc->instrument_opt_mode |= INSTRUMENT_OPT_CALLER;
+
+    } else {
+
+      aflcc->instrument_opt_mode |= INSTRUMENT_OPT_CTX_K;
+
+    }
+
+  }
+
+}
+
+// compiler_mode would also be set if depended by the instrument_mode
+static void instrument_mode_new_environ(aflcc_state_t *aflcc) {
+
+  if (!getenv("AFL_LLVM_INSTRUMENT")) return;
+
+  u8 *ptr2 = strtok(getenv("AFL_LLVM_INSTRUMENT"), ":,;");
+
+  while (ptr2) {
+
+    if (strncasecmp(ptr2, "afl", strlen("afl")) == 0 ||
+        strncasecmp(ptr2, "classic", strlen("classic")) == 0) {
+
+      if (aflcc->instrument_mode == INSTRUMENT_LTO) {
+
+        aflcc->instrument_mode = INSTRUMENT_CLASSIC;
+        aflcc->lto_mode = 1;
+
+      } else if (!aflcc->instrument_mode || 
+                  aflcc->instrument_mode == INSTRUMENT_AFL) {
+
+        aflcc->instrument_mode = INSTRUMENT_AFL;
+
+      } else {
+
+        FATAL("main instrumentation mode already set with %s",
+              instrument_mode_2str(aflcc->instrument_mode));
+
+      }
+
+    }
+
+    if (strncasecmp(ptr2, "pc-guard", strlen("pc-guard")) == 0 ||
+        strncasecmp(ptr2, "pcguard", strlen("pcguard")) == 0) {
+
+      if (!aflcc->instrument_mode || 
+          aflcc->instrument_mode == INSTRUMENT_PCGUARD)
+
+        aflcc->instrument_mode = INSTRUMENT_PCGUARD;
+
+      else
+        FATAL("main instrumentation mode already set with %s",
+              instrument_mode_2str(aflcc->instrument_mode));
+
+    }
+
+    if (strncasecmp(ptr2, "llvmnative", strlen("llvmnative")) == 0 ||
+        strncasecmp(ptr2, "llvm-native", strlen("llvm-native")) == 0 ||
+        strncasecmp(ptr2, "native", strlen("native")) == 0) {
+
+      if (!aflcc->instrument_mode || 
+          aflcc->instrument_mode == INSTRUMENT_LLVMNATIVE)
+
+        aflcc->instrument_mode = INSTRUMENT_LLVMNATIVE;
+
+      else
+        FATAL("main instrumentation mode already set with %s",
+              instrument_mode_2str(aflcc->instrument_mode));
+
+    }
+
+    if (strncasecmp(ptr2, "llvmcodecov", strlen("llvmcodecov")) == 0 ||
+        strncasecmp(ptr2, "llvm-codecov", strlen("llvm-codecov")) == 0) {
+
+      if (!aflcc->instrument_mode ||
+          aflcc->instrument_mode == INSTRUMENT_LLVMNATIVE) {
+
+        aflcc->instrument_mode = INSTRUMENT_LLVMNATIVE;
+        aflcc->instrument_opt_mode |= INSTRUMENT_OPT_CODECOV;
+
+      } else {
+
+        FATAL("main instrumentation mode already set with %s",
+              instrument_mode_2str(aflcc->instrument_mode));
+
+      }
+
+    }
+
+    if (strncasecmp(ptr2, "cfg", strlen("cfg")) == 0 ||
+        strncasecmp(ptr2, "instrim", strlen("instrim")) == 0) {
+
+      FATAL(
+          "InsTrim instrumentation was removed. Use a modern LLVM and "
+          "PCGUARD (default in afl-cc).\n");
+
+    }
+
+    if (strncasecmp(ptr2, "lto", strlen("lto")) == 0) {
+
+      aflcc->lto_mode = 1;
+      if (!aflcc->instrument_mode || 
+          aflcc->instrument_mode == INSTRUMENT_LTO)
+
+        aflcc->instrument_mode = INSTRUMENT_LTO;
+
+      else
+        FATAL("main instrumentation mode already set with %s",
+              instrument_mode_2str(aflcc->instrument_mode));
+
+    }
+
+    if (strcasecmp(ptr2, "gcc") == 0) {
+
+      if (!aflcc->instrument_mode || 
+          aflcc->instrument_mode == INSTRUMENT_GCC)
+
+        aflcc->instrument_mode = INSTRUMENT_GCC;
+
+      else if (aflcc->instrument_mode != INSTRUMENT_GCC)
+        FATAL("main instrumentation mode already set with %s",
+              instrument_mode_2str(aflcc->instrument_mode));
+
+      aflcc->compiler_mode = GCC;
+
+    }
+
+    if (strcasecmp(ptr2, "clang") == 0) {
+
+      if (!aflcc->instrument_mode ||
+          aflcc->instrument_mode == INSTRUMENT_CLANG)
+
+        aflcc->instrument_mode = INSTRUMENT_CLANG;
+
+      else if (aflcc->instrument_mode != INSTRUMENT_CLANG)
+        FATAL("main instrumentation mode already set with %s",
+              instrument_mode_2str(aflcc->instrument_mode));
+      
+      aflcc->compiler_mode = CLANG;
+
+    }
+
+    if (strncasecmp(ptr2, "ctx-", strlen("ctx-")) == 0 ||
+        strncasecmp(ptr2, "kctx-", strlen("c-ctx-")) == 0 ||
+        strncasecmp(ptr2, "k-ctx-", strlen("k-ctx-")) == 0) {
+
+      u8 *ptr3 = ptr2;
+      while (*ptr3 && (*ptr3 < '0' || *ptr3 > '9'))
+        ptr3++;
+
+      if (!*ptr3) {
+
+        if ((ptr3 = getenv("AFL_LLVM_CTX_K")) == NULL)
+          FATAL(
+              "you must set the K-CTX K with (e.g. for value 2) "
+              "AFL_LLVM_INSTRUMENT=ctx-2");
+
+      }
+
+      aflcc->ctx_k = atoi(ptr3);
+      if (aflcc->ctx_k < 1 || aflcc->ctx_k > CTX_MAX_K)
+        FATAL(
+            "K-CTX instrumentation option must be between 1 and CTX_MAX_K "
+            "(%u)",
+            CTX_MAX_K);
+
+      if (aflcc->ctx_k == 1) {
+
+        aflcc->instrument_opt_mode |= INSTRUMENT_OPT_CALLER;
+        setenv("AFL_LLVM_CALLER", "1", 1);
+        unsetenv("AFL_LLVM_CTX_K");
+
+      } else {
+
+        aflcc->instrument_opt_mode |= (INSTRUMENT_OPT_CTX_K);
+        u8 *ptr4 = alloc_printf("%u", aflcc->ctx_k);
+        setenv("AFL_LLVM_CTX_K", ptr4, 1);
+
+      }
+
+    }
+
+    if (strcasecmp(ptr2, "ctx") == 0) {
+
+      aflcc->instrument_opt_mode |= INSTRUMENT_OPT_CTX;
+      setenv("AFL_LLVM_CTX", "1", 1);
+
+    }
+
+    if (strncasecmp(ptr2, "caller", strlen("caller")) == 0) {
+
+      aflcc->instrument_opt_mode |= INSTRUMENT_OPT_CALLER;
+      setenv("AFL_LLVM_CALLER", "1", 1);
+
+    }
+
+    if (strncasecmp(ptr2, "ngram", strlen("ngram")) == 0) {
+
+      u8 *ptr3 = ptr2 + strlen("ngram");
+      while (*ptr3 && (*ptr3 < '0' || *ptr3 > '9'))
+        ptr3++;
+
+      if (!*ptr3) {
+
+        if ((ptr3 = getenv("AFL_LLVM_NGRAM_SIZE")) == NULL)
+          FATAL(
+              "you must set the NGRAM size with (e.g. for value 2) "
+              "AFL_LLVM_INSTRUMENT=ngram-2");
+
+      }
+
+      aflcc->ngram_size = atoi(ptr3);
+      if (aflcc->ngram_size < 2 || aflcc->ngram_size > NGRAM_SIZE_MAX)
+        FATAL(
+            "NGRAM instrumentation option must be between 2 and "
+            "NGRAM_SIZE_MAX (%u)",
+            NGRAM_SIZE_MAX);
+      aflcc->instrument_opt_mode |= (INSTRUMENT_OPT_NGRAM);
+      u8 *ptr4 = alloc_printf("%u", aflcc->ngram_size);
+      setenv("AFL_LLVM_NGRAM_SIZE", ptr4, 1);
+
+    }
+
+    ptr2 = strtok(NULL, ":,;");
+
+  }
+
+}
+
+void instrument_mode_by_environ(aflcc_state_t *aflcc) {
+
+  if (getenv("AFL_LLVM_INSTRUMENT_FILE") || getenv("AFL_LLVM_WHITELIST") ||
+      getenv("AFL_LLVM_ALLOWLIST") || getenv("AFL_LLVM_DENYLIST") ||
+      getenv("AFL_LLVM_BLOCKLIST")) {
+
+    aflcc->have_instr_env = 1;
+
+  }
+
+  if (aflcc->have_instr_env && getenv("AFL_DONT_OPTIMIZE") && !be_quiet) {
+
+    WARNF(
+        "AFL_LLVM_ALLOWLIST/DENYLIST and AFL_DONT_OPTIMIZE cannot be combined "
+        "for file matching, only function matching!");
+
+  }
+
+  instrument_mode_old_environ(aflcc);
+  instrument_mode_new_environ(aflcc);  
+
+}
