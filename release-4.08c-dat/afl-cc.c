@@ -1249,16 +1249,8 @@ int main(int argc, char **argv, char **envp) {
 
   }
 
-  if (debug) {
-
-    DEBUGF("cd '%s';", getthecwd());
-    for (i = 0; i < argc; i++)
-      SAYF(" '%s'", argv[i]);
-    SAYF("\n");
-    fflush(stdout);
-    fflush(stderr);
-
-  }
+  if (aflcc->debug) 
+    debugf_args(argc, argv);
 
   if (getenv("AFL_LLVM_LAF_ALL")) {
 
@@ -1290,16 +1282,8 @@ int main(int argc, char **argv, char **envp) {
 
   edit_params(aflcc, argc, argv, envp);
 
-  if (debug) {
-
-    DEBUGF("cd '%s';", getthecwd());
-    for (i = 0; i < (s32)cc_par_cnt; i++)
-      SAYF(" '%s'", cc_params[i]);
-    SAYF("\n");
-    fflush(stdout);
-    fflush(stderr);
-
-  }
+  if (aflcc->debug) 
+    debugf_args((s32)aflcc->cc_par_cnt, aflcc->cc_params);
 
   if (passthrough) {
 
