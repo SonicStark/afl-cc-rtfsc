@@ -123,12 +123,12 @@ typedef struct aflcc_state
       asan_set,
       x_set,
       bit_mode,
-      hared_linking,
       preprocessor_only,
       have_unroll,
       have_o,
       have_pic,
       have_c,
+      shared_linking,
       partial_linking,
       non_dash;
 
