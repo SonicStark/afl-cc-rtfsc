@@ -198,6 +198,12 @@ void instrument_mode_by_environ(aflcc_state_t *);
 void mode_final_checkout(aflcc_state_t *, int argc, char **argv);
 void mode_notification(aflcc_state_t *);
 
+/* provided for preprocessor */
+
+void add_macro(aflcc_state_t *);
+void set_fortification(aflcc_state_t *, u8);
+void add_lsan_ctrl(aflcc_state_t *);
+
 /* linking */
 
 void add_runtime(aflcc_state_t *);
