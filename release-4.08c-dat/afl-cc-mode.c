@@ -555,7 +555,7 @@ void instrument_mode_by_environ(aflcc_state_t *aflcc) {
 
 }
 
-void instrument_opt_mode_mutex(aflcc_state_t *aflcc) {
+static void instrument_opt_mode_exclude(aflcc_state_t *aflcc) {
 
   if ((aflcc->instrument_opt_mode & INSTRUMENT_OPT_CTX) &&
       (aflcc->instrument_opt_mode & INSTRUMENT_OPT_CALLER)) {
@@ -577,5 +577,183 @@ void instrument_opt_mode_mutex(aflcc_state_t *aflcc) {
     FATAL("you cannot set CALLER and K-CTX together");
 
   }
+
+  if (aflcc->instrument_opt_mode && 
+      aflcc->compiler_mode != LLVM)
+    FATAL("CTX, CALLER and NGRAM can only be used in LLVM mode");
+
+  if (aflcc->instrument_opt_mode && 
+      aflcc->instrument_opt_mode != INSTRUMENT_OPT_CODECOV &&
+      aflcc->instrument_mode != INSTRUMENT_CLASSIC)
+    FATAL(
+        "CALLER, CTX and NGRAM instrumentation options can only be used with "
+        "the LLVM CLASSIC instrumentation mode.");
+
+}
+
+void mode_final_checkout(aflcc_state_t *aflcc, int argc, char **argv) {
+
+  if (aflcc->instrument_opt_mode && 
+      aflcc->instrument_mode == INSTRUMENT_DEFAULT &&
+      (aflcc->compiler_mode == LLVM || aflcc->compiler_mode == UNSET)) {
+
+    aflcc->instrument_mode = INSTRUMENT_CLASSIC;
+    aflcc->compiler_mode = LLVM;
+
+  }
+
+  if (!aflcc->compiler_mode) {
+
+    // lto is not a default because outside of afl-cc RANLIB and AR have to
+    // be set to LLVM versions so this would work
+    if (aflcc->have_llvm)
+      aflcc->compiler_mode = LLVM;
+    else if (aflcc->have_gcc_plugin)
+      aflcc->compiler_mode = GCC_PLUGIN;
+    else if (aflcc->have_gcc)
+#ifdef __APPLE__
+      // on OSX clang masquerades as GCC
+      aflcc->compiler_mode = CLANG;
+#else
+      aflcc->compiler_mode = GCC;
+#endif
+    else if (aflcc->have_lto)
+      aflcc->compiler_mode = LTO;
+    else
+      FATAL("no compiler mode available");
+
+  }
+
+  /* if our PCGUARD implementation is not available then silently switch to
+     native LLVM PCGUARD */
+  if (aflcc->compiler_mode == CLANG &&
+      (aflcc->instrument_mode == INSTRUMENT_DEFAULT ||
+       aflcc->instrument_mode == INSTRUMENT_PCGUARD) &&
+      find_object(aflcc, "SanitizerCoveragePCGUARD.so", argv[0]) == NULL) {
+
+    aflcc->instrument_mode = INSTRUMENT_LLVMNATIVE;
+
+  }
+
+  if (aflcc->compiler_mode == GCC) {
+
+    aflcc->instrument_mode = INSTRUMENT_GCC;
+
+  }
+
+  if (aflcc->compiler_mode == CLANG) {
+
+    aflcc->instrument_mode = INSTRUMENT_CLANG;
+    setenv(CLANG_ENV_VAR, "1", 1);  // used by afl-as
+
+  }
+
+  if (aflcc->compiler_mode == LTO) {
+
+    if (aflcc->instrument_mode == 0 || 
+        aflcc->instrument_mode == INSTRUMENT_LTO ||
+        aflcc->instrument_mode == INSTRUMENT_CFG ||
+        aflcc->instrument_mode == INSTRUMENT_PCGUARD) {
+
+      aflcc->lto_mode = 1;
+      // force CFG
+      // if (!aflcc->instrument_mode) {
+
+      aflcc->instrument_mode = INSTRUMENT_PCGUARD;
+
+      // }
+
+    } else if (aflcc->instrument_mode == INSTRUMENT_CLASSIC) {
+
+      aflcc->lto_mode = 1;
+
+    } else {
+
+      if (!be_quiet) {
+
+        WARNF("afl-clang-lto called with mode %s, using that mode instead",
+              instrument_mode_2str(aflcc->instrument_mode));
+
+      }
+
+    }
+
+  }
+
+  if (aflcc->instrument_mode == 0 && 
+      aflcc->compiler_mode < GCC_PLUGIN) {
+
+#if LLVM_MAJOR >= 7
+  #if LLVM_MAJOR < 11 && (LLVM_MAJOR < 10 || LLVM_MINOR < 1)
+    if (aflcc->have_instr_env) {
+
+      aflcc->instrument_mode = INSTRUMENT_AFL;
+      if (!be_quiet) {
+
+        WARNF(
+            "Switching to classic instrumentation because "
+            "AFL_LLVM_ALLOWLIST/DENYLIST does not work with PCGUARD < 10.0.1.");
+
+      }
+
+    } else
+
+  #endif
+      aflcc->instrument_mode = INSTRUMENT_PCGUARD;
+
+#else
+    aflcc->instrument_mode = INSTRUMENT_AFL;
+#endif
+
+  }
+
+  if (!aflcc->instrument_opt_mode &&
+      aflcc->lto_mode && 
+      aflcc->instrument_mode == INSTRUMENT_CFG) {
+
+      aflcc->instrument_mode = INSTRUMENT_PCGUARD;
+
+  }
+
+#ifndef AFL_CLANG_FLTO
+  if (aflcc->lto_mode)
+    FATAL(
+        "instrumentation mode LTO specified but LLVM support not available "
+        "(requires LLVM 11 or higher)");
+#endif
+
+  if (getenv("AFL_LLVM_SKIP_NEVERZERO") && getenv("AFL_LLVM_NOT_ZERO"))
+    FATAL(
+        "AFL_LLVM_NOT_ZERO and AFL_LLVM_SKIP_NEVERZERO can not be set "
+        "together");
+
+#if LLVM_MAJOR < 11 && (LLVM_MAJOR < 10 || LLVM_MINOR < 1)
+  if (aflcc->instrument_mode == INSTRUMENT_PCGUARD && aflcc->have_instr_env) {
+
+    FATAL(
+        "Instrumentation type PCGUARD does not support "
+        "AFL_LLVM_ALLOWLIST/DENYLIST! Use LLVM 10.0.1+ instead.");
+
+  }
+#endif
+
+  instrument_opt_mode_exclude(aflcc);
+
+  u8 *ptr2;
+
+  if ((ptr2 = getenv("AFL_LLVM_DICT2FILE")) != NULL && *ptr2 != '/')
+    FATAL("AFL_LLVM_DICT2FILE must be set to an absolute file path");
+
+  if (getenv("AFL_LLVM_LAF_ALL")) {
+
+    setenv("AFL_LLVM_LAF_SPLIT_SWITCHES",     "1", 1);
+    setenv("AFL_LLVM_LAF_SPLIT_COMPARES",     "1", 1);
+    setenv("AFL_LLVM_LAF_SPLIT_FLOATS",       "1", 1);
+    setenv("AFL_LLVM_LAF_TRANSFORM_COMPARES", "1", 1);
+
+  }
+
+  aflcc->cmplog_mode = getenv("AFL_CMPLOG") || getenv("AFL_LLVM_CMPLOG") ||
+                getenv("AFL_GCC_CMPLOG");
 
 }

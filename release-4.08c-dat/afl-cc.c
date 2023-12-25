@@ -1056,128 +1056,14 @@ int main(int argc, char **argv, char **envp) {
   compiler_mode_by_cmdline(aflcc, argc, argv);
 
   instrument_mode_by_environ(aflcc);
-  instrument_opt_mode_mutex(aflcc);
 
-  if (instrument_opt_mode && instrument_mode == INSTRUMENT_DEFAULT &&
-      (compiler_mode == LLVM || compiler_mode == UNSET)) {
-
-    instrument_mode = INSTRUMENT_CLASSIC;
-    compiler_mode = LLVM;
-
-  }
-
-  if (!compiler_mode) {
-
-    // lto is not a default because outside of afl-cc RANLIB and AR have to
-    // be set to LLVM versions so this would work
-    if (have_llvm)
-      compiler_mode = LLVM;
-    else if (have_gcc_plugin)
-      compiler_mode = GCC_PLUGIN;
-    else if (have_gcc)
-#ifdef __APPLE__
-      // on OSX clang masquerades as GCC
-      compiler_mode = CLANG;
-#else
-      compiler_mode = GCC;
-#endif
-    else if (have_lto)
-      compiler_mode = LTO;
-    else
-      FATAL("no compiler mode available");
-
-  }
-
-  /* if our PCGUARD implementation is not available then silently switch to
-     native LLVM PCGUARD */
-  if (compiler_mode == CLANG &&
-      (instrument_mode == INSTRUMENT_DEFAULT ||
-       instrument_mode == INSTRUMENT_PCGUARD) &&
-      find_object("SanitizerCoveragePCGUARD.so", argv[0]) == NULL) {
-
-    instrument_mode = INSTRUMENT_LLVMNATIVE;
-
-  }
-
-  if (compiler_mode == GCC) {
-
-    instrument_mode = INSTRUMENT_GCC;
-
-  }
-
-  if (compiler_mode == CLANG) {
-
-    instrument_mode = INSTRUMENT_CLANG;
-    setenv(CLANG_ENV_VAR, "1", 1);  // used by afl-as
-
-  }
+  mode_final_checkout(aflcc, argc, argv);
 
   maybe_show_help(aflcc, argc, argv);
 
-  if (compiler_mode == LTO) {
-
-    if (instrument_mode == 0 || instrument_mode == INSTRUMENT_LTO ||
-        instrument_mode == INSTRUMENT_CFG ||
-        instrument_mode == INSTRUMENT_PCGUARD) {
-
-      lto_mode = 1;
-      // force CFG
-      // if (!instrument_mode) {
-
-      instrument_mode = INSTRUMENT_PCGUARD;
-      // ptr = instrument_mode_string[instrument_mode];
-      // }
-
-    } else if (instrument_mode == INSTRUMENT_CLASSIC) {
-
-      lto_mode = 1;
-
-    } else {
-
-      if (!be_quiet) {
-
-        WARNF("afl-clang-lto called with mode %s, using that mode instead",
-              instrument_mode_string[instrument_mode]);
-
-      }
-
-    }
-
-  }
-
-  if (instrument_mode == 0 && compiler_mode < GCC_PLUGIN) {
-
-#if LLVM_MAJOR >= 7
-  #if LLVM_MAJOR < 11 && (LLVM_MAJOR < 10 || LLVM_MINOR < 1)
-    if (have_instr_env) {
-
-      instrument_mode = INSTRUMENT_AFL;
-      if (!be_quiet) {
-
-        WARNF(
-            "Switching to classic instrumentation because "
-            "AFL_LLVM_ALLOWLIST/DENYLIST does not work with PCGUARD < 10.0.1.");
-
-      }
-
-    } else
-
-  #endif
-      instrument_mode = INSTRUMENT_PCGUARD;
-
-#else
-    instrument_mode = INSTRUMENT_AFL;
-#endif
-
-  }
-
-  if (instrument_opt_mode && compiler_mode != LLVM)
-    FATAL("CTX, CALLER and NGRAM can only be used in LLVM mode");
 
   if (!instrument_opt_mode) {
 
-    if (lto_mode && instrument_mode == INSTRUMENT_CFG)
-      instrument_mode = INSTRUMENT_PCGUARD;
     ptr = instrument_mode_string[instrument_mode];
 
   } else {
@@ -1196,40 +1082,6 @@ int main(int argc, char **argv, char **envp) {
     ck_free(ptr3);
 
   }
-
-#ifndef AFL_CLANG_FLTO
-  if (lto_mode)
-    FATAL(
-        "instrumentation mode LTO specified but LLVM support not available "
-        "(requires LLVM 11 or higher)");
-#endif
-
-  if (instrument_opt_mode && instrument_opt_mode != INSTRUMENT_OPT_CODECOV &&
-      instrument_mode != INSTRUMENT_CLASSIC)
-    FATAL(
-        "CALLER, CTX and NGRAM instrumentation options can only be used with "
-        "the LLVM CLASSIC instrumentation mode.");
-
-  if (getenv("AFL_LLVM_SKIP_NEVERZERO") && getenv("AFL_LLVM_NOT_ZERO"))
-    FATAL(
-        "AFL_LLVM_NOT_ZERO and AFL_LLVM_SKIP_NEVERZERO can not be set "
-        "together");
-
-#if LLVM_MAJOR < 11 && (LLVM_MAJOR < 10 || LLVM_MINOR < 1)
-  if (instrument_mode == INSTRUMENT_PCGUARD && have_instr_env) {
-
-    FATAL(
-        "Instrumentation type PCGUARD does not support "
-        "AFL_LLVM_ALLOWLIST/DENYLIST! Use LLVM 10.0.1+ instead.");
-
-  }
-
-#endif
-
-  u8 *ptr2;
-
-  if ((ptr2 = getenv("AFL_LLVM_DICT2FILE")) != NULL && *ptr2 != '/')
-    FATAL("AFL_LLVM_DICT2FILE must be set to an absolute file path");
 
   if ((isatty(2) && !be_quiet) || debug) {
 
@@ -1251,18 +1103,6 @@ int main(int argc, char **argv, char **envp) {
 
   if (aflcc->debug) 
     debugf_args(argc, argv);
-
-  if (getenv("AFL_LLVM_LAF_ALL")) {
-
-    setenv("AFL_LLVM_LAF_SPLIT_SWITCHES", "1", 1);
-    setenv("AFL_LLVM_LAF_SPLIT_COMPARES", "1", 1);
-    setenv("AFL_LLVM_LAF_SPLIT_FLOATS", "1", 1);
-    setenv("AFL_LLVM_LAF_TRANSFORM_COMPARES", "1", 1);
-
-  }
-
-  cmplog_mode = getenv("AFL_CMPLOG") || getenv("AFL_LLVM_CMPLOG") ||
-                getenv("AFL_GCC_CMPLOG");
 
 #if !defined(__ANDROID__) && !defined(ANDROID)
   ptr = find_object("afl-compiler-rt.o", argv[0]);
