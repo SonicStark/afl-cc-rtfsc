@@ -1012,44 +1012,7 @@ int main(int argc, char **argv, char **envp) {
 
   check_environment_vars(envp);
 
-  int   i;
-  char *ptr = NULL;
-
-  if ((ptr = find_object("as", argv[0])) != NULL) {
-
-    have_gcc = 1;
-    ck_free(ptr);
-
-  }
-
-#if (LLVM_MAJOR >= 3)
-
-  if ((ptr = find_object("SanitizerCoverageLTO.so", argv[0])) != NULL) {
-
-    have_lto = 1;
-    ck_free(ptr);
-
-  }
-
-  if ((ptr = find_object("cmplog-routines-pass.so", argv[0])) != NULL) {
-
-    have_llvm = 1;
-    ck_free(ptr);
-
-  }
-
-#endif
-
-#ifdef __ANDROID__
-  have_llvm = 1;
-#endif
-
-  if ((ptr = find_object("afl-gcc-pass.so", argv[0])) != NULL) {
-
-    have_gcc_plugin = 1;
-    ck_free(ptr);
-
-  }
+  find_built_deps(aflcc, argv[0]);
 
   compiler_mode_by_callname(aflcc);
   compiler_mode_by_environ(aflcc);
@@ -1065,22 +1028,6 @@ int main(int argc, char **argv, char **envp) {
 
   if (aflcc->debug) 
     debugf_args(argc, argv);
-
-#if !defined(__ANDROID__) && !defined(ANDROID)
-  ptr = find_object("afl-compiler-rt.o", argv[0]);
-
-  if (!ptr) {
-
-    FATAL(
-        "Unable to find 'afl-compiler-rt.o'. Please set the AFL_PATH "
-        "environment variable.");
-
-  }
-
-  if (debug) { DEBUGF("rt=%s obj_path=%s\n", ptr, obj_path); }
-
-  ck_free(ptr);
-#endif
 
   edit_params(aflcc, argc, argv, envp);
 

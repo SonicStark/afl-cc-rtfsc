@@ -116,6 +116,7 @@ typedef struct aflcc_state
       have_llvm, 
       have_gcc_plugin,
       have_lto, 
+      have_optimized_pcguard,
       have_instr_list;
 
   u8 fortify_set,
@@ -150,6 +151,8 @@ void maybe_show_help(aflcc_state_t *, int argc, char **argv);
 
 /* Try to find a specific runtime we need, returns NULL on fail. */
 u8 *find_object(aflcc_state_t *, u8 *obj, u8 *argv0);
+
+void find_built_deps(aflcc_state_t *, u8 *argv0);
 
 static inline void load_llvm_pass(aflcc_state_t *aflcc, u8 *pass) {
 

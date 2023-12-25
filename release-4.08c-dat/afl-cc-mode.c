@@ -629,7 +629,7 @@ void mode_final_checkout(aflcc_state_t *aflcc, int argc, char **argv) {
   if (aflcc->compiler_mode == CLANG &&
       (aflcc->instrument_mode == INSTRUMENT_DEFAULT ||
        aflcc->instrument_mode == INSTRUMENT_PCGUARD) &&
-      find_object(aflcc, "SanitizerCoveragePCGUARD.so", argv[0]) == NULL) {
+      !aflcc->have_optimized_pcguard) {
 
     aflcc->instrument_mode = INSTRUMENT_LLVMNATIVE;
 

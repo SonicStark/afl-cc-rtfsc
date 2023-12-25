@@ -257,3 +257,68 @@ u8 *find_object(aflcc_state_t *aflcc, u8 *obj, u8 *argv0) {
   return NULL;
 
 }
+
+void find_built_deps(aflcc_state_t *aflcc, u8 *argv0) {
+
+  char *ptr = NULL;
+
+  if ((ptr = find_object(aflcc, "as", argv0)) != NULL) {
+
+    aflcc->have_gcc = 1;
+    ck_free(ptr);
+
+  }
+
+  if ((ptr = find_object(aflcc, "SanitizerCoveragePCGUARD.so", argv0)) != NULL) {
+
+    aflcc->have_optimized_pcguard = 1;
+    ck_free(ptr);
+
+  }
+
+#if (LLVM_MAJOR >= 3)
+
+  if ((ptr = find_object(aflcc, "SanitizerCoverageLTO.so", argv0)) != NULL) {
+
+    aflcc->have_lto = 1;
+    ck_free(ptr);
+
+  }
+
+  if ((ptr = find_object(aflcc, "cmplog-routines-pass.so", argv0)) != NULL) {
+
+    aflcc->have_llvm = 1;
+    ck_free(ptr);
+
+  }
+
+#endif
+
+#ifdef __ANDROID__
+  aflcc->have_llvm = 1;
+#endif
+
+  if ((ptr = find_object(aflcc, "afl-gcc-pass.so", argv0)) != NULL) {
+
+    aflcc->have_gcc_plugin = 1;
+    ck_free(ptr);
+
+  }
+
+#if !defined(__ANDROID__) && !defined(ANDROID)
+  ptr = find_object(aflcc, "afl-compiler-rt.o", argv0);
+
+  if (!ptr) {
+
+    FATAL(
+        "Unable to find 'afl-compiler-rt.o'. Please set the AFL_PATH "
+        "environment variable.");
+
+  }
+
+  if (aflcc->debug) { DEBUGF("rt=%s obj_path=%s\n", ptr, aflcc->obj_path); }
+
+  ck_free(ptr);
+#endif
+
+}
