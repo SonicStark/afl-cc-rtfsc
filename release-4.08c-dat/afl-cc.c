@@ -1034,18 +1034,19 @@ int main(int argc, char **argv, char **envp) {
   if (aflcc->debug) 
     debugf_args((s32)aflcc->cc_par_cnt, aflcc->cc_params);
 
-  if (passthrough) {
+  if (aflcc->passthrough) {
 
-    argv[0] = cc_params[0];
-    execvp(cc_params[0], (char **)argv);
+    argv[0] = aflcc->cc_params[0];
+    execvp(aflcc->cc_params[0], (char **)argv);
 
   } else {
 
-    execvp(cc_params[0], (char **)cc_params);
+    execvp(aflcc->cc_params[0], (char **)aflcc->cc_params);
 
   }
 
-  FATAL("Oops, failed to execute '%s' - check your PATH", cc_params[0]);
+  FATAL("Oops, failed to execute '%s' - check your PATH", 
+          aflcc->cc_params[0]);
 
   return 0;
 
