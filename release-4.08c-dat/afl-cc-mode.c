@@ -757,3 +757,39 @@ void mode_final_checkout(aflcc_state_t *aflcc, int argc, char **argv) {
                 getenv("AFL_GCC_CMPLOG");
 
 }
+
+void mode_notification(aflcc_state_t *aflcc) {
+
+  char *ptr2 = alloc_printf(" + NGRAM-%u", aflcc->ngram_size);
+  char *ptr3 = alloc_printf(" + K-CTX-%u", aflcc->ctx_k);
+
+  char *ptr1 = alloc_printf(
+    "%s%s%s%s%s", instrument_mode_2str(aflcc->instrument_mode),
+    (aflcc->instrument_opt_mode & INSTRUMENT_OPT_CTX) ? " + CTX" : "",
+    (aflcc->instrument_opt_mode & INSTRUMENT_OPT_CALLER) ? " + CALLER" : "",
+    (aflcc->instrument_opt_mode & INSTRUMENT_OPT_NGRAM) ? ptr2 : "",
+    (aflcc->instrument_opt_mode & INSTRUMENT_OPT_CTX_K) ? ptr3 : "");
+
+    ck_free(ptr2);
+    ck_free(ptr3);
+
+  if ((isatty(2) && !be_quiet) || aflcc->debug) {
+
+    SAYF(cCYA
+         "afl-cc" VERSION cRST
+         " by Michal Zalewski, Laszlo Szekeres, Marc Heuse - mode: %s-%s\n",
+         compiler_mode_2str(aflcc->compiler_mode), ptr1);
+
+  }
+
+  if (!be_quiet && (aflcc->compiler_mode == GCC || 
+                    aflcc->compiler_mode == CLANG)) {
+
+    WARNF(
+        "You are using outdated instrumentation, install LLVM and/or "
+        "gcc-plugin and use afl-clang-fast/afl-clang-lto/afl-gcc-fast "
+        "instead!");
+
+  }
+
+}

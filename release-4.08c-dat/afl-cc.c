@@ -1061,45 +1061,7 @@ int main(int argc, char **argv, char **envp) {
 
   maybe_show_help(aflcc, argc, argv);
 
-
-  if (!instrument_opt_mode) {
-
-    ptr = instrument_mode_string[instrument_mode];
-
-  } else {
-
-    char *ptr2 = alloc_printf(" + NGRAM-%u", ngram_size);
-    char *ptr3 = alloc_printf(" + K-CTX-%u", ctx_k);
-
-    ptr = alloc_printf(
-        "%s%s%s%s%s", instrument_mode_string[instrument_mode],
-        (instrument_opt_mode & INSTRUMENT_OPT_CTX) ? " + CTX" : "",
-        (instrument_opt_mode & INSTRUMENT_OPT_CALLER) ? " + CALLER" : "",
-        (instrument_opt_mode & INSTRUMENT_OPT_NGRAM) ? ptr2 : "",
-        (instrument_opt_mode & INSTRUMENT_OPT_CTX_K) ? ptr3 : "");
-
-    ck_free(ptr2);
-    ck_free(ptr3);
-
-  }
-
-  if ((isatty(2) && !be_quiet) || debug) {
-
-    SAYF(cCYA
-         "afl-cc" VERSION cRST
-         " by Michal Zalewski, Laszlo Szekeres, Marc Heuse - mode: %s-%s\n",
-         compiler_mode_string[compiler_mode], ptr);
-
-  }
-
-  if (!be_quiet && (compiler_mode == GCC || compiler_mode == CLANG)) {
-
-    WARNF(
-        "You are using outdated instrumentation, install LLVM and/or "
-        "gcc-plugin and use afl-clang-fast/afl-clang-lto/afl-gcc-fast "
-        "instead!");
-
-  }
+  mode_notification(aflcc);
 
   if (aflcc->debug) 
     debugf_args(argc, argv);

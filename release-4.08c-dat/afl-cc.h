@@ -186,5 +186,6 @@ void compiler_mode_by_environ(aflcc_state_t *);
 void compiler_mode_by_cmdline(aflcc_state_t *, int argc, char **argv);
 void instrument_mode_by_environ(aflcc_state_t *);
 void mode_final_checkout(aflcc_state_t *, int argc, char **argv);
+void mode_notification(aflcc_state_t *);
 
 #endif
