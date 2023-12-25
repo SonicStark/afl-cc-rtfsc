@@ -198,4 +198,8 @@ void instrument_mode_by_environ(aflcc_state_t *);
 void mode_final_checkout(aflcc_state_t *, int argc, char **argv);
 void mode_notification(aflcc_state_t *);
 
+/* linking */
+
+void add_runtime(aflcc_state_t *);
+
 #endif

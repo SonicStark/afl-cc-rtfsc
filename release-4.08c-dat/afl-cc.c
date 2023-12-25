@@ -632,21 +632,6 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   if (!have_pic) { cc_params[cc_par_cnt++] = "-fPIC"; }
 
-  // in case LLVM is installed not via a package manager or "make install"
-  // e.g. compiled download or compiled from github then its ./lib directory
-  // might not be in the search path. Add it if so.
-  u8 *libdir = strdup(LLVM_LIBDIR);
-  if (plusplus_mode && strlen(libdir) && strncmp(libdir, "/usr", 4) &&
-      strncmp(libdir, "/lib", 4)) {
-
-    cc_params[cc_par_cnt++] = "-Wl,-rpath";
-    cc_params[cc_par_cnt++] = libdir;
-
-  } else {
-
-    free(libdir);
-
-  }
 
   if (getenv("AFL_HARDEN")) {
 
@@ -758,10 +743,6 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
     cc_params[cc_par_cnt++] = "-fno-builtin-strcasestr";
 
   }
-
-#if defined(USEMMAP) && !defined(__HAIKU__) && !__APPLE__
-  if (!have_c) cc_params[cc_par_cnt++] = "-lrt";
-#endif
 
   cc_params[cc_par_cnt++] = "-D__AFL_COMPILER=1";
   cc_params[cc_par_cnt++] = "-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION=1";
@@ -887,104 +868,9 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   }
 
-  if (preprocessor_only || have_c || !non_dash) {
+  add_runtime(aflcc);
 
-    /* In the preprocessor_only case (-E), we are not actually compiling at
-       all but requesting the compiler to output preprocessed sources only.
-       We must not add the runtime in this case because the compiler will
-       simply output its binary content back on stdout, breaking any build
-       systems that rely on a separate source preprocessing step. */
-    cc_params[cc_par_cnt] = NULL;
-    return;
-
-  }
-
-#ifndef __ANDROID__
-
-  if (compiler_mode != GCC && compiler_mode != CLANG) {
-
-    switch (bit_mode) {
-
-      case 0:
-        if (!shared_linking && !partial_linking)
-          cc_params[cc_par_cnt++] =
-              alloc_printf("%s/afl-compiler-rt.o", obj_path);
-        if (lto_mode)
-          cc_params[cc_par_cnt++] =
-              alloc_printf("%s/afl-llvm-rt-lto.o", obj_path);
-        break;
-
-      case 32:
-        if (!shared_linking && !partial_linking) {
-
-          cc_params[cc_par_cnt++] =
-              alloc_printf("%s/afl-compiler-rt-32.o", obj_path);
-          if (access(cc_params[cc_par_cnt - 1], R_OK))
-            FATAL("-m32 is not supported by your compiler");
-
-        }
-
-        if (lto_mode) {
-
-          cc_params[cc_par_cnt++] =
-              alloc_printf("%s/afl-llvm-rt-lto-32.o", obj_path);
-          if (access(cc_params[cc_par_cnt - 1], R_OK))
-            FATAL("-m32 is not supported by your compiler");
-
-        }
-
-        break;
-
-      case 64:
-        if (!shared_linking && !partial_linking) {
-
-          cc_params[cc_par_cnt++] =
-              alloc_printf("%s/afl-compiler-rt-64.o", obj_path);
-          if (access(cc_params[cc_par_cnt - 1], R_OK))
-            FATAL("-m64 is not supported by your compiler");
-
-        }
-
-        if (lto_mode) {
-
-          cc_params[cc_par_cnt++] =
-              alloc_printf("%s/afl-llvm-rt-lto-64.o", obj_path);
-          if (access(cc_params[cc_par_cnt - 1], R_OK))
-            FATAL("-m64 is not supported by your compiler");
-
-        }
-
-        break;
-
-    }
-
-  #if !defined(__APPLE__) && !defined(__sun)
-    if (!shared_linking && !partial_linking)
-      cc_params[cc_par_cnt++] =
-          alloc_printf("-Wl,--dynamic-list=%s/dynamic_list.txt", obj_path);
-  #endif
-
-  #if defined(__APPLE__)
-    if (shared_linking || partial_linking) {
-
-      cc_params[cc_par_cnt++] = "-Wl,-U";
-      cc_params[cc_par_cnt++] = "-Wl,___afl_area_ptr";
-      cc_params[cc_par_cnt++] = "-Wl,-U";
-      cc_params[cc_par_cnt++] = "-Wl,___sanitizer_cov_trace_pc_guard_init";
-
-    }
-
-  #endif
-
-  }
-
-  #if defined(USEMMAP) && !defined(__HAIKU__) && !__APPLE__
-  cc_params[cc_par_cnt++] = "-lrt";
-  #endif
-
-#endif
-
-  cc_params[cc_par_cnt] = NULL;
+  aflcc->cc_params[aflcc->cc_par_cnt] = NULL;
 
 }
 
