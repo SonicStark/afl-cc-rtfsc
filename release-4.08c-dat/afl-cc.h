@@ -90,11 +90,11 @@ u8 *compiler_mode_2str(compiler_mode_id);
 typedef struct aflcc_state
 {
 
-  u8  *obj_path;                  /* Path to runtime libraries         */
   u8 **cc_params;                 /* Parameters passed to the real CC  */
   u32  cc_par_cnt;                /* Param count, including argv0      */
 
-  u8  *callname;
+  u8 *argv0;                      /* Original argv0 (by strdup)        */
+  u8 *callname;                   /* Executable file argv0 indicated   */
 
   u8 debug;
 
@@ -149,32 +149,60 @@ void init_callname(aflcc_state_t *, u8 *argv0);
 
 void maybe_show_help(aflcc_state_t *, int argc, char **argv);
 
-/* Try to find a specific runtime we need, returns NULL on fail. */
-u8 *find_object(aflcc_state_t *, u8 *obj, u8 *argv0);
+/* Try to find a specific runtime we need, the path to obj would be 
+  allocated and returned. Otherwise it returns NULL on fail. */
+u8 *find_object(aflcc_state_t *, u8 *obj);
 
-void find_built_deps(aflcc_state_t *, u8 *argv0);
+void find_built_deps(aflcc_state_t *);
 
-#define INSERT_PARAM(cc, pa)              \
-  do {                                    \
-                                          \
-    cc->cc_params[cc->cc_par_cnt++] = pa; \
-                                          \
+#define INSERT_PARAM(cc, pa)                                        \
+  do {                                                              \
+                                                                    \
+    cc->cc_params[cc->cc_par_cnt++] = pa;                           \
+                                                                    \
+  } while (0)
+
+#define INSERT_OBJECT(cc, obj, fmt, msg)                            \
+  do {                                                              \
+                                                                    \
+    u8 *_rt_path = find_object(cc, obj);                            \
+    if (!_rt_path) {                                                \
+                                                                    \
+      if (msg)                                                      \
+        FATAL(STRINGIFY(msg));                                      \
+      else                                                          \
+        FATAL("Unable to find '%s'", obj);                          \
+                                                                    \
+    } else {                                                        \
+                                                                    \
+      if (fmt) {                                                    \
+                                                                    \
+        u8 *_rt_path_fmt = alloc_printf(STRINGIFY(fmt), _rt_path);  \
+        ck_free(_rt_path);                                          \
+        cc->cc_params[cc->cc_par_cnt++] = _rt_path_fmt;             \
+                                                                    \
+      } else {                                                      \
+                                                                    \
+        cc->cc_params[cc->cc_par_cnt++] = _rt_path;                 \
+                                                                    \
+      }                                                             \
+                                                                    \
+    }                                                               \
+                                                                    \
   } while (0)
 
 static inline void load_llvm_pass(aflcc_state_t *aflcc, u8 *pass) {
 
-#if LLVM_MAJOR >= 11                                /* use new pass manager */
+#if LLVM_MAJOR >= 11              /* use new pass manager */
   #if LLVM_MAJOR < 16
       INSERT_PARAM(aflcc, "-fexperimental-new-pass-manager");
   #endif
-      INSERT_PARAM(aflcc, 
-        alloc_printf("-fpass-plugin=%s/%s", aflcc->obj_path, pass));
+      INSERT_OBJECT(aflcc, pass, "-fpass-plugin=%s", 0);
 #else
       INSERT_PARAM(aflcc, "-Xclang");
       INSERT_PARAM(aflcc, "-load");
       INSERT_PARAM(aflcc, "-Xclang");
-      INSERT_PARAM(aflcc, 
-        alloc_printf("%s/%s", aflcc->obj_path, pass));
+      INSERT_OBJECT(aflcc, pass, 0, 0);
 #endif
 
 }

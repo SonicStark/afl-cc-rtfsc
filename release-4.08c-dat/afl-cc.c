@@ -785,7 +785,7 @@ int main(int argc, char **argv, char **envp) {
 
   check_environment_vars(envp);
 
-  find_built_deps(aflcc, argv[0]);
+  find_built_deps(aflcc);
 
   compiler_mode_by_callname(aflcc);
   compiler_mode_by_environ(aflcc);

@@ -67,12 +67,13 @@ u8 *getthecwd() {
 
 void init_callname(aflcc_state_t *aflcc, u8 *argv0) {
 
+  aflcc->argv0 = ck_strdup(argv0);
   char *cname = NULL;
 
-  if ((cname = strrchr(argv0, '/')) != NULL)
+  if ((cname = strrchr(aflcc->argv0, '/')) != NULL)
     cname++;
   else
-    cname = argv0;
+    cname = aflcc->argv0;
 
   aflcc->callname = cname;
 
@@ -86,21 +87,22 @@ void init_callname(aflcc_state_t *aflcc, u8 *argv0) {
 /*
   in find_object() we look here:
 
-  1. if obj_path is already set we look there first
-  2. then we check the $AFL_PATH environment variable location if set
-  3. next we check argv[0] if it has path information and use it
+  1. firstly we check the $AFL_PATH environment variable location if set
+  2. next we check argv[0] if it has path information and use it
     a) we also check ../lib/afl
-  4. if 3. failed we check /proc (only Linux, Android, NetBSD, DragonFly, and
+  3. if 2. failed we check /proc (only Linux, Android, NetBSD, DragonFly, and
      FreeBSD with procfs)
     a) and check here in ../lib/afl too
-  5. we look into the AFL_PATH define (usually /usr/local/lib/afl)
-  6. we finally try the current directory
+  4. we look into the AFL_PATH define (usually /usr/local/lib/afl)
+  5. we finally try the current directory
 
   if all these attempts fail - we return NULL and the caller has to decide
-  what to do.
+  what to do. Otherwise the path to obj would be allocated and returned.
 */
 
-u8 *find_object(aflcc_state_t *aflcc, u8 *obj, u8 *argv0) {
+u8 *find_object(aflcc_state_t *aflcc, u8 *obj) {
+
+  u8 *argv0 = aflcc->argv0;
 
   u8 *afl_path = getenv("AFL_PATH");
   u8 *slash = NULL, *tmp;
@@ -113,7 +115,6 @@ u8 *find_object(aflcc_state_t *aflcc, u8 *obj, u8 *argv0) {
 
     if (!access(tmp, R_OK)) {
 
-      aflcc->obj_path = afl_path;
       return tmp;
 
     }
@@ -139,7 +140,7 @@ u8 *find_object(aflcc_state_t *aflcc, u8 *obj, u8 *argv0) {
 
       if (!access(tmp, R_OK)) {
 
-        aflcc->obj_path = dir;
+        ck_free(dir);
         return tmp;
 
       }
@@ -151,8 +152,6 @@ u8 *find_object(aflcc_state_t *aflcc, u8 *obj, u8 *argv0) {
 
       if (!access(tmp, R_OK)) {
 
-        u8 *dir2 = alloc_printf("%s/../lib/afl", dir);
-        aflcc->obj_path = dir2;
         ck_free(dir);
         return tmp;
 
@@ -194,8 +193,6 @@ u8 *find_object(aflcc_state_t *aflcc, u8 *obj, u8 *argv0) {
 
             if (!access(tmp, R_OK)) {
 
-              u8 *dir = alloc_printf("%s", exepath);
-              aflcc->obj_path = dir;
               return tmp;
 
             }
@@ -207,11 +204,11 @@ u8 *find_object(aflcc_state_t *aflcc, u8 *obj, u8 *argv0) {
 
             if (!access(tmp, R_OK)) {
 
-              u8 *dir = alloc_printf("%s/../lib/afl/", exepath);
-              aflcc->obj_path = dir;
               return tmp;
 
             }
+
+            ck_free(tmp);
 
           }
 
@@ -232,7 +229,6 @@ u8 *find_object(aflcc_state_t *aflcc, u8 *obj, u8 *argv0) {
 
   if (!access(tmp, R_OK)) {
 
-    aflcc->obj_path = AFL_PATH;
     return tmp;
 
   }
@@ -245,7 +241,6 @@ u8 *find_object(aflcc_state_t *aflcc, u8 *obj, u8 *argv0) {
 
   if (!access(tmp, R_OK)) {
 
-    aflcc->obj_path = ".";
     return tmp;
 
   }
@@ -258,18 +253,18 @@ u8 *find_object(aflcc_state_t *aflcc, u8 *obj, u8 *argv0) {
 
 }
 
-void find_built_deps(aflcc_state_t *aflcc, u8 *argv0) {
+void find_built_deps(aflcc_state_t *aflcc) {
 
   char *ptr = NULL;
 
-  if ((ptr = find_object(aflcc, "as", argv0)) != NULL) {
+  if ((ptr = find_object(aflcc, "as")) != NULL) {
 
     aflcc->have_gcc = 1;
     ck_free(ptr);
 
   }
 
-  if ((ptr = find_object(aflcc, "SanitizerCoveragePCGUARD.so", argv0)) != NULL) {
+  if ((ptr = find_object(aflcc, "SanitizerCoveragePCGUARD.so")) != NULL) {
 
     aflcc->have_optimized_pcguard = 1;
     ck_free(ptr);
@@ -278,14 +273,14 @@ void find_built_deps(aflcc_state_t *aflcc, u8 *argv0) {
 
 #if (LLVM_MAJOR >= 3)
 
-  if ((ptr = find_object(aflcc, "SanitizerCoverageLTO.so", argv0)) != NULL) {
+  if ((ptr = find_object(aflcc, "SanitizerCoverageLTO.so")) != NULL) {
 
     aflcc->have_lto = 1;
     ck_free(ptr);
 
   }
 
-  if ((ptr = find_object(aflcc, "cmplog-routines-pass.so", argv0)) != NULL) {
+  if ((ptr = find_object(aflcc, "cmplog-routines-pass.so")) != NULL) {
 
     aflcc->have_llvm = 1;
     ck_free(ptr);
@@ -298,7 +293,7 @@ void find_built_deps(aflcc_state_t *aflcc, u8 *argv0) {
   aflcc->have_llvm = 1;
 #endif
 
-  if ((ptr = find_object(aflcc, "afl-gcc-pass.so", argv0)) != NULL) {
+  if ((ptr = find_object(aflcc, "afl-gcc-pass.so")) != NULL) {
 
     aflcc->have_gcc_plugin = 1;
     ck_free(ptr);
@@ -306,7 +301,7 @@ void find_built_deps(aflcc_state_t *aflcc, u8 *argv0) {
   }
 
 #if !defined(__ANDROID__) && !defined(ANDROID)
-  ptr = find_object(aflcc, "afl-compiler-rt.o", argv0);
+  ptr = find_object(aflcc, "afl-compiler-rt.o");
 
   if (!ptr) {
 
@@ -316,7 +311,7 @@ void find_built_deps(aflcc_state_t *aflcc, u8 *argv0) {
 
   }
 
-  if (aflcc->debug) { DEBUGF("rt=%s obj_path=%s\n", ptr, aflcc->obj_path); }
+  if (aflcc->debug) { DEBUGF("rt=%s\n", ptr); }
 
   ck_free(ptr);
 #endif
