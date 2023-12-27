@@ -240,25 +240,9 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   }
 
-  if (compiler_mode == GCC_PLUGIN) {
+  if (aflcc->compiler_mode == GCC_PLUGIN) {
 
-    char *fplugin_arg;
-
-    if (cmplog_mode) {
-
-      fplugin_arg =
-          alloc_printf("-fplugin=%s/afl-gcc-cmplog-pass.so", obj_path);
-      cc_params[cc_par_cnt++] = fplugin_arg;
-      fplugin_arg =
-          alloc_printf("-fplugin=%s/afl-gcc-cmptrs-pass.so", obj_path);
-      cc_params[cc_par_cnt++] = fplugin_arg;
-
-    }
-
-    fplugin_arg = alloc_printf("-fplugin=%s/afl-gcc-pass.so", obj_path);
-    cc_params[cc_par_cnt++] = fplugin_arg;
-    cc_params[cc_par_cnt++] = "-fno-if-conversion";
-    cc_params[cc_par_cnt++] = "-fno-if-conversion2";
+    add_gcc_plugin(aflcc);
 
   }
 

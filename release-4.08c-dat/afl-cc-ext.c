@@ -36,3 +36,21 @@ void add_assembler(aflcc_state_t *aflcc) {
     INSERT_PARAM(aflcc, "-no-integrated-as");
 
 }
+
+void add_gcc_plugin(aflcc_state_t *aflcc) {
+
+  char *fplugin_arg;
+
+  if (aflcc->cmplog_mode) {
+
+    INSERT_OBJECT(aflcc, "afl-gcc-cmplog-pass.so", "-fplugin=%s", 0);
+    INSERT_OBJECT(aflcc, "afl-gcc-cmptrs-pass.so", "-fplugin=%s", 0);
+
+  }
+
+  INSERT_OBJECT(aflcc, "afl-gcc-pass.so", "-fplugin=%s", 0);
+
+  INSERT_PARAM(aflcc, "-fno-if-conversion");
+  INSERT_PARAM(aflcc, "-fno-if-conversion2");
+
+}
