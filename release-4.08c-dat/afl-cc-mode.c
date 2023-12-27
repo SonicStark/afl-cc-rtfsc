@@ -722,6 +722,17 @@ void mode_final_checkout(aflcc_state_t *aflcc, int argc, char **argv) {
         "(requires LLVM 11 or higher)");
 #endif
 
+  if (aflcc->lto_mode) {
+
+    if (aflcc->lto_flag[0] != '-')
+      FATAL(
+          "Using afl-clang-lto is not possible because Makefile magic did not "
+          "identify the correct -flto flag");
+    else
+      aflcc->compiler_mode = LTO;
+
+  }
+
   if (getenv("AFL_LLVM_SKIP_NEVERZERO") && getenv("AFL_LLVM_NOT_ZERO"))
     FATAL(
         "AFL_LLVM_NOT_ZERO and AFL_LLVM_SKIP_NEVERZERO can not be set "

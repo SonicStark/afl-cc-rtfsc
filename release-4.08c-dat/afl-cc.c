@@ -367,17 +367,6 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   cc_params = ck_alloc(MAX_PARAMS_NUM * sizeof(u8 *));
 
-  if (lto_mode) {
-
-    if (lto_flag[0] != '-')
-      FATAL(
-          "Using afl-clang-lto is not possible because Makefile magic did not "
-          "identify the correct -flto flag");
-    else
-      compiler_mode = LTO;
-
-  }
-
   set_real_argv0(aflcc);
 
   if (compiler_mode == GCC || compiler_mode == CLANG) {
