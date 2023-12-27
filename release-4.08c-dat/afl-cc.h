@@ -56,6 +56,16 @@
 
 typedef enum {
 
+  PARAM_MISS, // not matched
+  PARAM_SCAN, // scan without any changes
+  PARAM_ORIG, // kept as-is
+  PARAM_FROM, // modifed before kept
+  PARAM_DROP, // ignored
+
+} param_st;
+
+typedef enum {
+
   INSTRUMENT_DEFAULT = 0,
   INSTRUMENT_CLASSIC = 1,
   INSTRUMENT_AFL = 1,
@@ -231,6 +241,11 @@ void mode_notification(aflcc_state_t *);
 void add_macro(aflcc_state_t *);
 void set_fortification(aflcc_state_t *, u8);
 void add_lsan_ctrl(aflcc_state_t *);
+
+/* for generic compiler driver */
+
+param_st handle_fsanitize(aflcc_state_t *, u8 *cur_argv, u8 scan);
+void add_sanitizers(aflcc_state_t *, char **envp);
 
 /* linking */
 

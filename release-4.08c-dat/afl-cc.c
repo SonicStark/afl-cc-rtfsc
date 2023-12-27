@@ -1,70 +1,5 @@
 #include "afl-cc.h"
 
-void parse_fsanitize(char *string) {
-
-  char *p, *ptr = string + strlen("-fsanitize=");
-  char *new = malloc(strlen(string) + 1);
-  char *tmp = malloc(strlen(ptr));
-  u32   count = 0, len, ende = 0;
-
-  if (!new || !tmp) { FATAL("could not acquire memory"); }
-  strcpy(new, "-fsanitize=");
-
-  do {
-
-    p = strchr(ptr, ',');
-    if (!p) {
-
-      p = ptr + strlen(ptr) + 1;
-      ende = 1;
-
-    }
-
-    len = p - ptr;
-    if (len) {
-
-      strncpy(tmp, ptr, len);
-      tmp[len] = 0;
-      // fprintf(stderr, "Found: %s\n", tmp);
-      ptr += len + 1;
-      if (*tmp) {
-
-        u32 copy = 1;
-        if (!strcmp(tmp, "fuzzer")) {
-
-          need_aflpplib = 1;
-          copy = 0;
-
-        } else if (!strncmp(tmp, "fuzzer", 6)) {
-
-          copy = 0;
-
-        }
-
-        if (copy) {
-
-          if (count) { strcat(new, ","); }
-          strcat(new, tmp);
-          ++count;
-
-        }
-
-      }
-
-    } else {
-
-      ptr++;                                    /*fprintf(stderr, "NO!\n"); */
-
-    }
-
-  } while (!ende);
-
-  strcpy(string, new);
-  // fprintf(stderr, "string: %s\n", string);
-  // fprintf(stderr, "new: %s\n", new);
-
-}
-
 static void process_params(u32 argc, char **argv) {
 
   if (cc_par_cnt + argc >= MAX_PARAMS_NUM) {
@@ -144,55 +79,12 @@ static void process_params(u32 argc, char **argv) {
 
     }
 
-    if (!strncmp(cur, "-fsanitize-coverage-", 20) && strstr(cur, "list=")) {
-
-      have_instr_list = 1;
-
-    }
-
-    if (!strncmp(cur, "-fsanitize=", strlen("-fsanitize=")) &&
-        strchr(cur, ',')) {
-
-      parse_fsanitize(cur);
-      if (!cur || strlen(cur) <= strlen("-fsanitize=")) { continue; }
-
-    } else if ((!strncmp(cur, "-fsanitize=fuzzer-",
-
-                         strlen("-fsanitize=fuzzer-")) ||
-                !strncmp(cur, "-fsanitize-coverage",
-                         strlen("-fsanitize-coverage"))) &&
-               (strncmp(cur, "sanitize-coverage-allow",
-                        strlen("sanitize-coverage-allow")) &&
-                strncmp(cur, "sanitize-coverage-deny",
-                        strlen("sanitize-coverage-deny")) &&
-                instrument_mode != INSTRUMENT_LLVMNATIVE)) {
-
-      if (!be_quiet) { WARNF("Found '%s' - stripping!", cur); }
-      continue;
-
-    }
-
-    if (need_aflpplib || !strcmp(cur, "-fsanitize=fuzzer")) {
-
-
-      if (need_aflpplib) {
-
-        need_aflpplib = 0;
-
-      } else {
-
-        continue;
-
-      }
-
-    }
+    handle_fsanitize(aflcc, cur, 0); // FIXME
+    handle_fsanitize(aflcc, cur, 1); // FIXME
 
     if (!strcmp(cur, "-m32")) bit_mode = 32;
     if (!strcmp(cur, "armv7a-linux-androideabi")) bit_mode = 32;
     if (!strcmp(cur, "-m64")) bit_mode = 64;
-
-    if (!strcmp(cur, "-fsanitize=address") || !strcmp(cur, "-fsanitize=memory"))
-      asan_set = 1;
 
     if (strstr(cur, "FORTIFY_SOURCE")) fortify_set = 1;
 
@@ -602,78 +494,7 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   }
 
-  if (!asan_set) {
-
-    if (getenv("AFL_USE_ASAN")) {
-
-      if (getenv("AFL_USE_MSAN")) FATAL("ASAN and MSAN are mutually exclusive");
-
-      if (getenv("AFL_HARDEN"))
-        FATAL("ASAN and AFL_HARDEN are mutually exclusive");
-
-      set_fortification(aflcc, 0);
-      cc_params[cc_par_cnt++] = "-fsanitize=address";
-
-    } else if (getenv("AFL_USE_MSAN")) {
-
-      if (getenv("AFL_USE_ASAN")) FATAL("ASAN and MSAN are mutually exclusive");
-
-      if (getenv("AFL_HARDEN"))
-        FATAL("MSAN and AFL_HARDEN are mutually exclusive");
-
-      set_fortification(aflcc, 0);
-      cc_params[cc_par_cnt++] = "-fsanitize=memory";
-
-    }
-
-  }
-
-  if (getenv("AFL_USE_UBSAN")) {
-
-    cc_params[cc_par_cnt++] = "-fsanitize=undefined";
-    cc_params[cc_par_cnt++] = "-fsanitize-undefined-trap-on-error";
-    cc_params[cc_par_cnt++] = "-fno-sanitize-recover=all";
-    cc_params[cc_par_cnt++] = "-fno-omit-frame-pointer";
-
-  }
-
-  if (getenv("AFL_USE_TSAN")) {
-
-    cc_params[cc_par_cnt++] = "-fsanitize=thread";
-    cc_params[cc_par_cnt++] = "-fno-omit-frame-pointer";
-
-  }
-
-  if (getenv("AFL_USE_LSAN")) {
-
-    cc_params[cc_par_cnt++] = "-fsanitize=leak";
-    add_lsan_ctrl(aflcc);
-
-  }
-
-  if (getenv("AFL_USE_CFISAN")) {
-
-    if (compiler_mode == GCC_PLUGIN || compiler_mode == GCC) {
-
-      cc_params[cc_par_cnt++] = "-fcf-protection=full";
-
-    } else {
-
-      if (!lto_mode) {
-
-        uint32_t i = 0, found = 0;
-        while (envp[i] != NULL && !found)
-          if (strncmp("-flto", envp[i++], 5) == 0) found = 1;
-        if (!found) cc_params[cc_par_cnt++] = "-flto";
-
-      }
-
-      cc_params[cc_par_cnt++] = "-fsanitize=cfi";
-      cc_params[cc_par_cnt++] = "-fvisibility=hidden";
-
-    }
-
-  }
+  add_sanitizers(aflcc, envp);
 
   if (!getenv("AFL_DONT_OPTIMIZE")) {
 
