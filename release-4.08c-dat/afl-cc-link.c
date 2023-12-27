@@ -1,5 +1,40 @@
 #include "afl-cc.h"
 
+static void add_aflpplib(aflcc_state_t *aflcc) {
+
+  if (!aflcc->need_aflpplib) return;
+
+  u8 *afllib = find_object(aflcc, "libAFLDriver.a");
+
+  if (!be_quiet) {
+
+    OKF("Found '-fsanitize=fuzzer', replacing with libAFLDriver.a");
+
+  }
+
+  if (!afllib) {
+
+    if (!be_quiet) {
+
+      WARNF(
+          "Cannot find 'libAFLDriver.a' to replace '-fsanitize=fuzzer' in "
+          "the flags - this will fail!");
+
+    }
+
+  } else {
+
+    INSERT_PARAM(aflcc, afllib);
+
+#ifdef __APPLE__
+    INSERT_PARAM(aflcc, "-Wl,-undefined");
+    INSERT_PARAM(aflcc, "dynamic_lookup");
+#endif
+
+  }
+
+}
+
 void add_runtime(aflcc_state_t *aflcc) {
 
   if (aflcc->preprocessor_only || aflcc->have_c || !aflcc->non_dash) {
@@ -81,6 +116,8 @@ void add_runtime(aflcc_state_t *aflcc) {
   }
 
 #endif
+
+  add_aflpplib(aflcc);
 
 #if defined(USEMMAP) && !defined(__HAIKU__) && !__APPLE__
   INSERT_PARAM(aflcc, "-Wl,-lrt");

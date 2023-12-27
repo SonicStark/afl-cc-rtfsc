@@ -174,34 +174,6 @@ static void process_params(u32 argc, char **argv) {
 
     if (need_aflpplib || !strcmp(cur, "-fsanitize=fuzzer")) {
 
-      u8 *afllib = find_object("libAFLDriver.a", argv[0]);
-
-      if (!be_quiet) {
-
-        OKF("Found '-fsanitize=fuzzer', replacing with libAFLDriver.a");
-
-      }
-
-      if (!afllib) {
-
-        if (!be_quiet) {
-
-          WARNF(
-              "Cannot find 'libAFLDriver.a' to replace '-fsanitize=fuzzer' in "
-              "the flags - this will fail!");
-
-        }
-
-      } else {
-
-        cc_params[cc_par_cnt++] = afllib;
-
-#ifdef __APPLE__
-        cc_params[cc_par_cnt++] = "-undefined";
-        cc_params[cc_par_cnt++] = "dynamic_lookup";
-#endif
-
-      }
 
       if (need_aflpplib) {
 
