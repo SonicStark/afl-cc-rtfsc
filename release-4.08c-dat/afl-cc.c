@@ -233,16 +233,10 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   set_real_argv0(aflcc);
 
-  if (compiler_mode == GCC || compiler_mode == CLANG) {
+  if (aflcc->compiler_mode == GCC || 
+      aflcc->compiler_mode == CLANG) {
 
-    cc_params[cc_par_cnt++] = "-B";
-    cc_params[cc_par_cnt++] = obj_path;
-
-    if (compiler_mode == CLANG) {
-
-      cc_params[cc_par_cnt++] = "-no-integrated-as";
-
-    }
+    add_assembler(aflcc);
 
   }
 

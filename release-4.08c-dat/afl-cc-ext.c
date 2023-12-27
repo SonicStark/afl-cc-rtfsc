@@ -18,3 +18,21 @@ void add_no_builtin(aflcc_state_t *aflcc) {
   }
 
 }
+
+void add_assembler(aflcc_state_t *aflcc) {
+
+  u8 *afl_as = find_object(aflcc, "as");
+  
+  if (!afl_as)
+    FATAL("Cannot find 'as' (symlink to 'afl-as').");
+
+  u8 *slash = strrchr(afl_as, '/');
+  if (slash) *slash = 0;
+
+  INSERT_PARAM(aflcc, "-B");
+  INSERT_PARAM(aflcc, "afl_as");
+
+  if (aflcc->compiler_mode == CLANG)
+    INSERT_PARAM(aflcc, "-no-integrated-as");
+
+}
