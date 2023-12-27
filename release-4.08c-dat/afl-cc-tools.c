@@ -45,7 +45,9 @@ void aflcc_state_init(aflcc_state_t *aflcc) {
   // Default NULL/0 is a good start
   memset(aflcc, 0, sizeof(aflcc_state_t));
 
+  aflcc->cc_params = ck_alloc(MAX_PARAMS_NUM * sizeof(u8 *));
   aflcc->cc_par_cnt = 1;
+
   aflcc->lto_flag = AFL_CLANG_FLTO;
   
   // aflcc->march_opt = CFLAGS_OPT;

@@ -229,9 +229,15 @@ static void process_params(u32 argc, char **argv) {
 
 static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp) {
 
-  cc_params = ck_alloc(MAX_PARAMS_NUM * sizeof(u8 *));
-
   set_real_argv0(aflcc);
+
+  // prevent unnecessary build errors
+  if (aflcc->compiler_mode != GCC_PLUGIN && 
+      aflcc->compiler_mode != GCC) {
+
+    INSERT_PARAM(aflcc, "-Wno-unused-command-line-argument");
+
+  }
 
   if (aflcc->compiler_mode == GCC || 
       aflcc->compiler_mode == CLANG) {
@@ -247,8 +253,6 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
   }
 
   if (compiler_mode == LLVM || compiler_mode == LTO) {
-
-    cc_params[cc_par_cnt++] = "-Wno-unused-command-line-argument";
 
     if (lto_mode && have_instr_env) {
 
@@ -491,20 +495,13 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   }
 
-  // prevent unnecessary build errors
-  if (compiler_mode != GCC_PLUGIN && compiler_mode != GCC) {
-
-    cc_params[cc_par_cnt++] = "-Wno-unused-command-line-argument";
-
-  }
-
   add_no_builtin(aflcc);
 
   add_macro(aflcc);
 
   add_runtime(aflcc);
 
-  aflcc->cc_params[aflcc->cc_par_cnt] = NULL;
+  INSERT_PARAM(aflcc, NULL);
 
 }
 
