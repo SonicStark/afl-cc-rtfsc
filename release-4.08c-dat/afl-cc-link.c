@@ -124,3 +124,42 @@ void add_runtime(aflcc_state_t *aflcc) {
 #endif
 
 }
+
+void add_lto_linker(aflcc_state_t *aflcc) {
+
+  unsetenv("AFL_LD");
+  unsetenv("AFL_LD_CALLER");
+
+  u8 *ld_path = NULL;
+  if (getenv("AFL_REAL_LD")) {
+
+    ld_path = strdup(getenv("AFL_REAL_LD"));
+
+  } else {
+
+    ld_path = strdup(AFL_REAL_LD);
+
+  }
+
+  if (!ld_path || !*ld_path) {
+
+    if (ld_path) {
+
+      // Freeing empty string
+      free(ld_path);
+
+    }
+
+    ld_path = strdup("ld.lld");
+
+  }
+
+  if (!ld_path) { PFATAL("Could not allocate mem for ld_path"); }
+#if defined(AFL_CLANG_LDPATH) && LLVM_MAJOR >= 12
+  INSERT_PARAM(aflcc, alloc_printf("--ld-path=%s", ld_path));
+#else
+  INSERT_PARAM(aflcc, alloc_printf("-fuse-ld=%s", ld_path));
+#endif
+  free(ld_path);
+
+}

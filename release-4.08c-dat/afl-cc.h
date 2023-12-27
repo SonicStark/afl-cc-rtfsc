@@ -254,5 +254,6 @@ void add_gcc_plugin(aflcc_state_t *);
 /* linking */
 
 void add_runtime(aflcc_state_t *);
+void add_lto_linker(aflcc_state_t *);
 
 #endif

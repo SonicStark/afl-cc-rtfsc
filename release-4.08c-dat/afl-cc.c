@@ -289,9 +289,6 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
     // /laf
 
-    unsetenv("AFL_LD");
-    unsetenv("AFL_LD_CALLER");
-
     if (cmplog_mode) {
 
       cc_params[cc_par_cnt++] = "-fno-inline";
@@ -309,37 +306,7 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
     if (lto_mode && !have_c) {
 
-      u8 *ld_path = NULL;
-      if (getenv("AFL_REAL_LD")) {
-
-        ld_path = strdup(getenv("AFL_REAL_LD"));
-
-      } else {
-
-        ld_path = strdup(AFL_REAL_LD);
-
-      }
-
-      if (!ld_path || !*ld_path) {
-
-        if (ld_path) {
-
-          // Freeing empty string
-          free(ld_path);
-
-        }
-
-        ld_path = strdup("ld.lld");
-
-      }
-
-      if (!ld_path) { PFATAL("Could not allocate mem for ld_path"); }
-#if defined(AFL_CLANG_LDPATH) && LLVM_MAJOR >= 12
-      cc_params[cc_par_cnt++] = alloc_printf("--ld-path=%s", ld_path);
-#else
-      cc_params[cc_par_cnt++] = alloc_printf("-fuse-ld=%s", ld_path);
-#endif
-      free(ld_path);
+      add_lto_linker(aflcc);
 
 #if defined(AFL_CLANG_LDPATH) && LLVM_MAJOR >= 15
       // The NewPM implementation only works fully since LLVM 15.
