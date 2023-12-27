@@ -506,21 +506,6 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   }
 
-  if (getenv("AFL_NO_BUILTIN") || getenv("AFL_LLVM_LAF_TRANSFORM_COMPARES") ||
-      getenv("LAF_TRANSFORM_COMPARES") || getenv("AFL_LLVM_LAF_ALL") ||
-      lto_mode) {
-
-    cc_params[cc_par_cnt++] = "-fno-builtin-strcmp";
-    cc_params[cc_par_cnt++] = "-fno-builtin-strncmp";
-    cc_params[cc_par_cnt++] = "-fno-builtin-strcasecmp";
-    cc_params[cc_par_cnt++] = "-fno-builtin-strncasecmp";
-    cc_params[cc_par_cnt++] = "-fno-builtin-memcmp";
-    cc_params[cc_par_cnt++] = "-fno-builtin-bcmp";
-    cc_params[cc_par_cnt++] = "-fno-builtin-strstr";
-    cc_params[cc_par_cnt++] = "-fno-builtin-strcasestr";
-
-  }
-
   if (x_set) {
 
     cc_params[cc_par_cnt++] = "-x";
@@ -534,6 +519,8 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
     cc_params[cc_par_cnt++] = "-Wno-unused-command-line-argument";
 
   }
+
+  add_no_builtin(aflcc);
 
   add_macro(aflcc);
 
