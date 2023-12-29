@@ -290,9 +290,9 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
     // /laf
 
-    if (cmplog_mode) {
+    if (aflcc->cmplog_mode) {
 
-      cc_params[cc_par_cnt++] = "-fno-inline";
+      INSERT_PARAM(aflcc, "-fno-inline");
 
       load_llvm_pass(aflcc, "cmplog-switches-pass.so");
       // reuse split switches from laf
@@ -391,7 +391,7 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
     }
 
-    if (cmplog_mode) {
+    if (aflcc->cmplog_mode) {
 
       load_llvm_pass(aflcc, "cmplog-instructions-pass.so");
       load_llvm_pass(aflcc, "cmplog-routines-pass.so");
