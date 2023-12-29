@@ -252,9 +252,10 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   }
 
-  if (compiler_mode == LLVM || compiler_mode == LTO) {
+  if (aflcc->compiler_mode == LLVM || 
+      aflcc->compiler_mode == LTO) {
 
-    if (lto_mode && have_instr_env) {
+    if (aflcc->lto_mode && aflcc->have_instr_env) {
 
       load_llvm_pass(aflcc, "afl-llvm-lto-instrumentlist.so");
 
@@ -301,29 +302,13 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
     // #if LLVM_MAJOR >= 13
     //     // Use the old pass manager in LLVM 14 which the AFL++ passes still
-    //     use. cc_params[cc_par_cnt++] = "-flegacy-pass-manager";
+    //     use. INSERT_PARAM(aflcc, "-flegacy-pass-manager");
     // #endif
 
-    if (lto_mode && !have_c) {
+    if (aflcc->lto_mode && !aflcc->have_c) {
 
       add_lto_linker(aflcc);
-
-#if defined(AFL_CLANG_LDPATH) && LLVM_MAJOR >= 15
-      // The NewPM implementation only works fully since LLVM 15.
-      cc_params[cc_par_cnt++] = alloc_printf(
-          "-Wl,--load-pass-plugin=%s/SanitizerCoverageLTO.so", obj_path);
-#elif defined(AFL_CLANG_LDPATH) && LLVM_MAJOR >= 13
-      cc_params[cc_par_cnt++] = "-Wl,--lto-legacy-pass-manager";
-      cc_params[cc_par_cnt++] =
-          alloc_printf("-Wl,-mllvm=-load=%s/SanitizerCoverageLTO.so", obj_path);
-#else
-      cc_params[cc_par_cnt++] = "-fno-experimental-new-pass-manager";
-      cc_params[cc_par_cnt++] =
-          alloc_printf("-Wl,-mllvm=-load=%s/SanitizerCoverageLTO.so", obj_path);
-#endif
-
-      cc_params[cc_par_cnt++] = "-Wl,--allow-multiple-definition";
-      cc_params[cc_par_cnt++] = lto_flag;
+      add_lto_passes(aflcc);
 
     } else {
 
@@ -413,18 +398,7 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
     }
 
-    // cc_params[cc_par_cnt++] = "-Qunused-arguments";
-
-    if (lto_mode && argc > 1) {
-
-      u32 idx;
-      for (idx = 1; idx < argc; idx++) {
-
-        if (!strncasecmp(argv[idx], "-fpic", 5)) have_pic = 1;
-
-      }
-
-    }
+    // INSERT_PARAM(aflcc, "-Qunused-arguments");
 
   }
 

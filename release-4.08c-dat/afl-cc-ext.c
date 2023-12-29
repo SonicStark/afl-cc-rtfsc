@@ -54,3 +54,21 @@ void add_gcc_plugin(aflcc_state_t *aflcc) {
   INSERT_PARAM(aflcc, "-fno-if-conversion2");
 
 }
+
+void add_lto_passes(aflcc_state_t *aflcc) {
+
+#if defined(AFL_CLANG_LDPATH) && LLVM_MAJOR >= 15
+  // The NewPM implementation only works fully since LLVM 15.
+  INSERT_OBJECT(aflcc, "SanitizerCoverageLTO.so", "-Wl,--load-pass-plugin=%s", 0);
+#elif defined(AFL_CLANG_LDPATH) && LLVM_MAJOR >= 13
+  INSERT_PARAM(aflcc, "-Wl,--lto-legacy-pass-manager");
+  INSERT_OBJECT(aflcc, "SanitizerCoverageLTO.so", "-Wl,-mllvm=-load=%s", 0);
+#else
+  INSERT_PARAM(aflcc, "-fno-experimental-new-pass-manager");
+  INSERT_OBJECT(aflcc, "SanitizerCoverageLTO.so", "-Wl,-mllvm=-load=%s", 0);
+#endif
+
+  INSERT_PARAM(aflcc, "-Wl,--allow-multiple-definition");
+  INSERT_PARAM(aflcc, aflcc->lto_flag);
+
+}
