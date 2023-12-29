@@ -2,11 +2,11 @@
 
 void add_misc_args(aflcc_state_t *aflcc) {
 
-  if (!aflcc->have_pic) { INSERT_PARAM(aflcc, "-fPIC"); }
+  if (!aflcc->have_pic) { insert_param(aflcc, "-fPIC"); }
 
   if (getenv("AFL_HARDEN")) {
 
-    INSERT_PARAM(aflcc, "-fstack-protector-all");
+    insert_param(aflcc, "-fstack-protector-all");
 
     if (!aflcc->fortify_set) ctrl_fortification(aflcc, 2);
 
@@ -14,18 +14,18 @@ void add_misc_args(aflcc_state_t *aflcc) {
 
   if (!getenv("AFL_DONT_OPTIMIZE")) {
 
-    INSERT_PARAM(aflcc, "-g");
-    if (!aflcc->have_o)   INSERT_PARAM(aflcc, "-O3");
-    if (!aflcc->have_unroll)  INSERT_PARAM(aflcc, "-funroll-loops");
+    insert_param(aflcc, "-g");
+    if (!aflcc->have_o)   insert_param(aflcc, "-O3");
+    if (!aflcc->have_unroll)  insert_param(aflcc, "-funroll-loops");
     // if (strlen(aflcc->march_opt) > 1 && aflcc->march_opt[0] == '-')
-    //     INSERT_PARAM(aflcc, aflcc->march_opt);
+    //     insert_param(aflcc, aflcc->march_opt);
 
   }
 
   if (aflcc->x_set) {
 
-    INSERT_PARAM(aflcc, "-x");
-    INSERT_PARAM(aflcc, "none");
+    insert_param(aflcc, "-x");
+    insert_param(aflcc, "none");
 
   }
 
@@ -137,7 +137,7 @@ param_st handle_misc_args(aflcc_state_t *aflcc, u8 *cur_argv, u8 scan) {
 #undef SCAN_ORIG
 
   if (final_ == PARAM_ORIG)
-    INSERT_PARAM(aflcc, cur_argv);
+    insert_param(aflcc, cur_argv);
 
   return final_;
 

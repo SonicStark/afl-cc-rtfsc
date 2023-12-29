@@ -6,7 +6,7 @@
 static void process_params(aflcc_state_t *aflcc, u8 scan,
                             u32 argc, char **argv) {
 
-  LIMIT_PARAMS(aflcc, argc);
+  limit_params(aflcc, argc);
 
   // for (u32 x = 0; x < argc; ++x) fprintf(stderr, "[%u] %s\n", x, argv[x]);
 
@@ -52,7 +52,7 @@ static void process_params(aflcc_state_t *aflcc, u8 scan,
       // Check not found or empty? let the compiler complain if so.
       if (!f || fstat(fileno(f), &st) < 0 || st.st_size < 1) {
 
-        if (!scan) INSERT_PARAM(aflcc, cur);
+        if (!scan) insert_param(aflcc, cur);
         continue;
 
       }
@@ -159,7 +159,7 @@ static void process_params(aflcc_state_t *aflcc, u8 scan,
     }
 
     if (!scan)
-      INSERT_PARAM(aflcc, cur);
+      insert_param(aflcc, cur);
 
   }
 
@@ -175,7 +175,7 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
   if (aflcc->compiler_mode != GCC_PLUGIN && 
       aflcc->compiler_mode != GCC) {
 
-    INSERT_PARAM(aflcc, "-Wno-unused-command-line-argument");
+    insert_param(aflcc, "-Wno-unused-command-line-argument");
 
   }
 
@@ -232,7 +232,7 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
     if (aflcc->cmplog_mode) {
 
-      INSERT_PARAM(aflcc, "-fno-inline");
+      insert_param(aflcc, "-fno-inline");
 
       load_llvm_pass(aflcc, "cmplog-switches-pass.so");
       // reuse split switches from laf
@@ -242,7 +242,7 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
     // #if LLVM_MAJOR >= 13
     //     // Use the old pass manager in LLVM 14 which the AFL++ passes still
-    //     use. INSERT_PARAM(aflcc, "-flegacy-pass-manager");
+    //     use. insert_param(aflcc, "-flegacy-pass-manager");
     // #endif
 
     if (aflcc->lto_mode && !aflcc->have_c) {
@@ -275,7 +275,7 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
     }
 
-    // INSERT_PARAM(aflcc, "-Qunused-arguments");
+    // insert_param(aflcc, "-Qunused-arguments");
 
   }
 
@@ -291,7 +291,7 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   add_runtime(aflcc);
 
-  INSERT_PARAM(aflcc, NULL);
+  insert_param(aflcc, NULL);
 
 }
 

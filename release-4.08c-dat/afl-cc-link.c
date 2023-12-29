@@ -102,7 +102,7 @@ param_st handle_linking_args(aflcc_state_t *aflcc, u8 *cur_argv, u8 scan,
   }
 
   if (final_ == PARAM_ORIG)
-    INSERT_PARAM(aflcc, cur_argv);
+    insert_param(aflcc, cur_argv);
   
   return final_;
 
@@ -132,11 +132,11 @@ static void add_aflpplib(aflcc_state_t *aflcc) {
 
   } else {
 
-    INSERT_PARAM(aflcc, afllib);
+    insert_param(aflcc, afllib);
 
 #ifdef __APPLE__
-    INSERT_PARAM(aflcc, "-Wl,-undefined");
-    INSERT_PARAM(aflcc, "dynamic_lookup");
+    insert_param(aflcc, "-Wl,-undefined");
+    insert_param(aflcc, "dynamic_lookup");
 #endif
 
   }
@@ -164,8 +164,8 @@ void add_runtime(aflcc_state_t *aflcc) {
       strncmp(libdir, "/usr", 4) &&
       strncmp(libdir, "/lib", 4)) {
 
-    INSERT_PARAM(aflcc, "-Wl,-rpath");
-    INSERT_PARAM(aflcc, libdir);
+    insert_param(aflcc, "-Wl,-rpath");
+    insert_param(aflcc, libdir);
 
   } else {
 
@@ -184,39 +184,39 @@ void add_runtime(aflcc_state_t *aflcc) {
 
       case 0:
         if (!aflcc->shared_linking && !aflcc->partial_linking)
-          INSERT_OBJECT(aflcc, "afl-compiler-rt.o", 0, 0);
+          insert_object(aflcc, "afl-compiler-rt.o", 0, 0);
         if (aflcc->lto_mode)
-          INSERT_OBJECT(aflcc, "afl-llvm-rt-lto.o", 0, 0);
+          insert_object(aflcc, "afl-llvm-rt-lto.o", 0, 0);
         break;
 
       case 32:
         if (!aflcc->shared_linking && !aflcc->partial_linking)
-          INSERT_OBJECT(aflcc, "afl-compiler-rt-32.o", 0, M32_ERR_MSG);
+          insert_object(aflcc, "afl-compiler-rt-32.o", 0, M32_ERR_MSG);
         if (aflcc->lto_mode)
-          INSERT_OBJECT(aflcc, "afl-llvm-rt-lto-32.o", 0, M32_ERR_MSG);
+          insert_object(aflcc, "afl-llvm-rt-lto-32.o", 0, M32_ERR_MSG);
         break;
 
       case 64:
         if (!aflcc->shared_linking && !aflcc->partial_linking)
-          INSERT_OBJECT(aflcc, "afl-compiler-rt-64.o", 0, M64_ERR_MSG);
+          insert_object(aflcc, "afl-compiler-rt-64.o", 0, M64_ERR_MSG);
         if (aflcc->lto_mode)
-          INSERT_OBJECT(aflcc, "afl-llvm-rt-lto-64.o", 0, M64_ERR_MSG);
+          insert_object(aflcc, "afl-llvm-rt-lto-64.o", 0, M64_ERR_MSG);
         break;
 
     }
 
   #if !defined(__APPLE__) && !defined(__sun)
     if (!aflcc->shared_linking && !aflcc->partial_linking)
-      INSERT_OBJECT(aflcc, "dynamic_list.txt", "-Wl,--dynamic-list=%s", 0);
+      insert_object(aflcc, "dynamic_list.txt", "-Wl,--dynamic-list=%s", 0);
   #endif
 
   #if defined(__APPLE__)
     if (aflcc->shared_linking || aflcc->partial_linking) {
 
-      INSERT_PARAM(aflcc, "-Wl,-U");
-      INSERT_PARAM(aflcc, "-Wl,___afl_area_ptr");
-      INSERT_PARAM(aflcc, "-Wl,-U");
-      INSERT_PARAM(aflcc, "-Wl,___sanitizer_cov_trace_pc_guard_init");
+      insert_param(aflcc, "-Wl,-U");
+      insert_param(aflcc, "-Wl,___afl_area_ptr");
+      insert_param(aflcc, "-Wl,-U");
+      insert_param(aflcc, "-Wl,___sanitizer_cov_trace_pc_guard_init");
 
     }
   #endif
@@ -228,7 +228,7 @@ void add_runtime(aflcc_state_t *aflcc) {
   add_aflpplib(aflcc);
 
 #if defined(USEMMAP) && !defined(__HAIKU__) && !__APPLE__
-  INSERT_PARAM(aflcc, "-Wl,-lrt");
+  insert_param(aflcc, "-Wl,-lrt");
 #endif
 
 }
@@ -264,9 +264,9 @@ void add_lto_linker(aflcc_state_t *aflcc) {
 
   if (!ld_path) { PFATAL("Could not allocate mem for ld_path"); }
 #if defined(AFL_CLANG_LDPATH) && LLVM_MAJOR >= 12
-  INSERT_PARAM(aflcc, alloc_printf("--ld-path=%s", ld_path));
+  insert_param(aflcc, alloc_printf("--ld-path=%s", ld_path));
 #else
-  INSERT_PARAM(aflcc, alloc_printf("-fuse-ld=%s", ld_path));
+  insert_param(aflcc, alloc_printf("-fuse-ld=%s", ld_path));
 #endif
   free(ld_path);
 

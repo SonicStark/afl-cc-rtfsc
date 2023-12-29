@@ -165,63 +165,59 @@ u8 *find_object(aflcc_state_t *, u8 *obj);
 
 void find_built_deps(aflcc_state_t *);
 
-#define LIMIT_PARAMS(cc, add)                                       \
-  do {                                                              \
-                                                                    \
-    if (cc->cc_par_cnt + add >= MAX_PARAMS_NUM)                     \
-      FATAL("Too many command line parameters, "                    \
-            "please increase MAX_PARAMS_NUM.");                     \
-                                                                    \
-  } while (0)
+static inline void limit_params(aflcc_state_t *aflcc, u32 add) {
 
-#define INSERT_PARAM(cc, pa)                                        \
-  do {                                                              \
-                                                                    \
-    cc->cc_params[cc->cc_par_cnt++] = pa;                           \
-                                                                    \
-  } while (0)
+  if (aflcc->cc_par_cnt + add >= MAX_PARAMS_NUM)
+    FATAL("Too many command line parameters, please increase MAX_PARAMS_NUM.");
 
-#define INSERT_OBJECT(cc, obj, fmt, msg)                            \
-  do {                                                              \
-                                                                    \
-    u8 *_rt_path = find_object(cc, obj);                            \
-    if (!_rt_path) {                                                \
-                                                                    \
-      if (msg)                                                      \
-        FATAL(STRINGIFY(msg));                                      \
-      else                                                          \
-        FATAL("Unable to find '%s'", obj);                          \
-                                                                    \
-    } else {                                                        \
-                                                                    \
-      if (fmt) {                                                    \
-                                                                    \
-        u8 *_rt_path_fmt = alloc_printf(STRINGIFY(fmt), _rt_path);  \
-        ck_free(_rt_path);                                          \
-        cc->cc_params[cc->cc_par_cnt++] = _rt_path_fmt;             \
-                                                                    \
-      } else {                                                      \
-                                                                    \
-        cc->cc_params[cc->cc_par_cnt++] = _rt_path;                 \
-                                                                    \
-      }                                                             \
-                                                                    \
-    }                                                               \
-                                                                    \
-  } while (0)
+}
+
+static inline void insert_param(aflcc_state_t *aflcc, u8 *param) {
+
+  aflcc->cc_params[aflcc->cc_par_cnt++] = param;
+
+}
+
+static inline void insert_object(aflcc_state_t *aflcc, u8 *obj, u8 *fmt, u8 *msg) {
+
+  u8 *_obj_path = find_object(aflcc, obj);
+  if (!_obj_path) {
+
+    if (msg)
+      FATAL("%s", msg);
+    else
+      FATAL("Unable to find '%s'", obj);
+
+  } else {
+
+    if (fmt) {
+
+      u8 *_obj_path_fmt = alloc_printf(fmt, _obj_path);
+      ck_free(_obj_path);
+      aflcc->cc_params[aflcc->cc_par_cnt++] = _obj_path_fmt;
+
+    } else {
+
+      aflcc->cc_params[aflcc->cc_par_cnt++] = _obj_path;
+
+    }
+
+  }
+
+}
 
 static inline void load_llvm_pass(aflcc_state_t *aflcc, u8 *pass) {
 
 #if LLVM_MAJOR >= 11              /* use new pass manager */
   #if LLVM_MAJOR < 16
-      INSERT_PARAM(aflcc, "-fexperimental-new-pass-manager");
+      insert_param(aflcc, "-fexperimental-new-pass-manager");
   #endif
-      INSERT_OBJECT(aflcc, pass, "-fpass-plugin=%s", 0);
+      insert_object(aflcc, pass, "-fpass-plugin=%s", 0);
 #else
-      INSERT_PARAM(aflcc, "-Xclang");
-      INSERT_PARAM(aflcc, "-load");
-      INSERT_PARAM(aflcc, "-Xclang");
-      INSERT_OBJECT(aflcc, pass, 0, 0);
+      insert_param(aflcc, "-Xclang");
+      insert_param(aflcc, "-load");
+      insert_param(aflcc, "-Xclang");
+      insert_object(aflcc, pass, 0, 0);
 #endif
 
 }

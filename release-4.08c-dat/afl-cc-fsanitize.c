@@ -177,7 +177,7 @@ param_st handle_fsanitize(aflcc_state_t *aflcc, u8 *cur_argv, u8 scan) {
   }
 
   if (final_ == PARAM_ORIG)
-    INSERT_PARAM(aflcc, cur_argv);
+    insert_param(aflcc, cur_argv);
   
   return final_;
 
@@ -195,7 +195,7 @@ void add_sanitizers(aflcc_state_t *aflcc, char **envp) {
         FATAL("ASAN and AFL_HARDEN are mutually exclusive");
 
       set_fortification(aflcc, 0);
-      INSERT_PARAM(aflcc, "-fsanitize=address");
+      insert_param(aflcc, "-fsanitize=address");
 
     } else if (getenv("AFL_USE_MSAN")) {
 
@@ -205,7 +205,7 @@ void add_sanitizers(aflcc_state_t *aflcc, char **envp) {
         FATAL("MSAN and AFL_HARDEN are mutually exclusive");
 
       set_fortification(aflcc, 0);
-      INSERT_PARAM(aflcc, "-fsanitize=memory");
+      insert_param(aflcc, "-fsanitize=memory");
 
     }
 
@@ -213,23 +213,23 @@ void add_sanitizers(aflcc_state_t *aflcc, char **envp) {
 
   if (getenv("AFL_USE_UBSAN")) {
 
-    INSERT_PARAM(aflcc, "-fsanitize=undefined");
-    INSERT_PARAM(aflcc, "-fsanitize-undefined-trap-on-error");
-    INSERT_PARAM(aflcc, "-fno-sanitize-recover=all");
-    INSERT_PARAM(aflcc, "-fno-omit-frame-pointer");
+    insert_param(aflcc, "-fsanitize=undefined");
+    insert_param(aflcc, "-fsanitize-undefined-trap-on-error");
+    insert_param(aflcc, "-fno-sanitize-recover=all");
+    insert_param(aflcc, "-fno-omit-frame-pointer");
 
   }
 
   if (getenv("AFL_USE_TSAN")) {
 
-    INSERT_PARAM(aflcc, "-fsanitize=thread");
-    INSERT_PARAM(aflcc, "-fno-omit-frame-pointer");
+    insert_param(aflcc, "-fsanitize=thread");
+    insert_param(aflcc, "-fno-omit-frame-pointer");
 
   }
 
   if (getenv("AFL_USE_LSAN")) {
 
-    INSERT_PARAM(aflcc, "-fsanitize=leak");
+    insert_param(aflcc, "-fsanitize=leak");
     add_lsan_ctrl(aflcc);
 
   }
@@ -239,7 +239,7 @@ void add_sanitizers(aflcc_state_t *aflcc, char **envp) {
     if (aflcc->compiler_mode == GCC_PLUGIN || 
         aflcc->compiler_mode == GCC) {
 
-      INSERT_PARAM(aflcc, "-fcf-protection=full");
+      insert_param(aflcc, "-fcf-protection=full");
 
     } else {
 
@@ -248,12 +248,12 @@ void add_sanitizers(aflcc_state_t *aflcc, char **envp) {
         uint32_t i = 0, found = 0;
         while (envp[i] != NULL && !found)
           if (strncmp("-flto", envp[i++], 5) == 0) found = 1;
-        if (!found) INSERT_PARAM(aflcc, "-flto");
+        if (!found) insert_param(aflcc, "-flto");
 
       }
 
-      INSERT_PARAM(aflcc, "-fsanitize=cfi");
-      INSERT_PARAM(aflcc, "-fvisibility=hidden");
+      insert_param(aflcc, "-fsanitize=cfi");
+      insert_param(aflcc, "-fvisibility=hidden");
 
     }
 

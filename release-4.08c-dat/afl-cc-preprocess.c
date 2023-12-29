@@ -2,8 +2,8 @@
 
 static void defs_common(aflcc_state_t *aflcc) {
 
-  INSERT_PARAM(aflcc, "-D__AFL_COMPILER=1");
-  INSERT_PARAM(aflcc, "-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION=1");
+  insert_param(aflcc, "-D__AFL_COMPILER=1");
+  insert_param(aflcc, "-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION=1");
 
 }
 
@@ -13,7 +13,7 @@ static void defs_selective_instr(aflcc_state_t *aflcc) {
 
   if (aflcc->plusplus_mode) {
 
-    INSERT_PARAM(aflcc,
+    insert_param(aflcc,
       "-D__AFL_COVERAGE()=int __afl_selective_coverage = 1;"
       "extern \"C\" void __afl_coverage_discard();"
       "extern \"C\" void __afl_coverage_skip();"
@@ -22,7 +22,7 @@ static void defs_selective_instr(aflcc_state_t *aflcc) {
 
   } else {
 
-    INSERT_PARAM(aflcc,
+    insert_param(aflcc,
       "-D__AFL_COVERAGE()=int __afl_selective_coverage = 1;"
       "void __afl_coverage_discard();"
       "void __afl_coverage_skip();"
@@ -31,14 +31,14 @@ static void defs_selective_instr(aflcc_state_t *aflcc) {
 
   }
 
-  INSERT_PARAM(aflcc,
+  insert_param(aflcc,
     "-D__AFL_COVERAGE_START_OFF()=int __afl_selective_coverage_start_off = "
     "1;");
-  INSERT_PARAM(aflcc, "-D__AFL_COVERAGE_ON()=__afl_coverage_on()");
-  INSERT_PARAM(aflcc, "-D__AFL_COVERAGE_OFF()=__afl_coverage_off()");
-  INSERT_PARAM(aflcc,
+  insert_param(aflcc, "-D__AFL_COVERAGE_ON()=__afl_coverage_on()");
+  insert_param(aflcc, "-D__AFL_COVERAGE_OFF()=__afl_coverage_off()");
+  insert_param(aflcc,
     "-D__AFL_COVERAGE_DISCARD()=__afl_coverage_discard()");
-  INSERT_PARAM(aflcc, "-D__AFL_COVERAGE_SKIP()=__afl_coverage_skip()");
+  insert_param(aflcc, "-D__AFL_COVERAGE_SKIP()=__afl_coverage_skip()");
 
 }
 
@@ -51,7 +51,7 @@ static void defs_persistent_mode(aflcc_state_t *aflcc) {
       aflcc->compiler_mode == CLANG)
       return;
 
-  INSERT_PARAM(aflcc, "-D__AFL_HAVE_MANUAL_CONTROL=1");
+  insert_param(aflcc, "-D__AFL_HAVE_MANUAL_CONTROL=1");
 
   /* When the user tries to use persistent or deferred forkserver modes by
       appending a single line to the program, we want to reliably inject a
@@ -73,7 +73,7 @@ static void defs_persistent_mode(aflcc_state_t *aflcc) {
 
     */
 
-  INSERT_PARAM(aflcc,
+  insert_param(aflcc,
     "-D__AFL_FUZZ_INIT()="
     "int __afl_sharedmem_fuzzing = 1;"
     "extern unsigned int *__afl_fuzz_len;"
@@ -81,16 +81,16 @@ static void defs_persistent_mode(aflcc_state_t *aflcc) {
     "unsigned char __afl_fuzz_alt[1048576];"
     "unsigned char *__afl_fuzz_alt_ptr = __afl_fuzz_alt;");
 
-  INSERT_PARAM(aflcc,
+  insert_param(aflcc,
     "-D__AFL_FUZZ_TESTCASE_BUF=(__afl_fuzz_ptr ? __afl_fuzz_ptr : "
     "__afl_fuzz_alt_ptr)");
 
-  INSERT_PARAM(aflcc,
+  insert_param(aflcc,
     "-D__AFL_FUZZ_TESTCASE_LEN=(__afl_fuzz_ptr ? *__afl_fuzz_len : "
     "(*__afl_fuzz_len = read(0, __afl_fuzz_alt_ptr, 1048576)) == 0xffffffff "
     "? 0 : *__afl_fuzz_len)");
 
-  INSERT_PARAM(aflcc,
+  insert_param(aflcc,
     "-D__AFL_LOOP(_A)="
     "({ static volatile const char *_B __attribute__((used,unused)); "
     " _B = (const char*)\"" PERSIST_SIG
@@ -106,7 +106,7 @@ static void defs_persistent_mode(aflcc_state_t *aflcc) {
     // if afl is connected, we run _A times, else once.
     "_L(__afl_connected ? _A : 1); })");
 
-  INSERT_PARAM(aflcc,
+  insert_param(aflcc,
     "-D__AFL_INIT()="
     "do { static volatile const char *_A __attribute__((used,unused)); "
     " _A = (const char*)\"" DEFER_SIG
@@ -136,15 +136,15 @@ void set_fortification(aflcc_state_t *aflcc, u8 action) {
   switch (action)
   {
   case 1:
-    INSERT_PARAM(aflcc, "-D_FORTIFY_SOURCE=1");
+    insert_param(aflcc, "-D_FORTIFY_SOURCE=1");
     break;
 
   case 2:
-    INSERT_PARAM(aflcc, "-D_FORTIFY_SOURCE=2");
+    insert_param(aflcc, "-D_FORTIFY_SOURCE=2");
     break;
 
   default: // OFF
-    INSERT_PARAM(aflcc, "-U_FORTIFY_SOURCE");
+    insert_param(aflcc, "-U_FORTIFY_SOURCE");
     break;
   }
 
@@ -152,11 +152,11 @@ void set_fortification(aflcc_state_t *aflcc, u8 action) {
 
 void add_lsan_ctrl(aflcc_state_t *aflcc) {
 
-  INSERT_PARAM(aflcc, "-includesanitizer/lsan_interface.h");
-  INSERT_PARAM(aflcc,
+  insert_param(aflcc, "-includesanitizer/lsan_interface.h");
+  insert_param(aflcc,
       "-D__AFL_LEAK_CHECK()={if(__lsan_do_recoverable_leak_check() > 0) "
       "_exit(23); }");
-  INSERT_PARAM(aflcc, "-D__AFL_LSAN_OFF()=__lsan_disable();");
-  INSERT_PARAM(aflcc, "-D__AFL_LSAN_ON()=__lsan_enable();");
+  insert_param(aflcc, "-D__AFL_LSAN_OFF()=__lsan_disable();");
+  insert_param(aflcc, "-D__AFL_LSAN_ON()=__lsan_enable();");
 
 }
