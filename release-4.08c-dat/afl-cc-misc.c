@@ -8,7 +8,7 @@ void add_misc_args(aflcc_state_t *aflcc) {
 
     insert_param(aflcc, "-fstack-protector-all");
 
-    if (!aflcc->fortify_set) ctrl_fortification(aflcc, 2);
+    if (!aflcc->fortify_set) set_fortification(aflcc, 2);
 
   }
 
