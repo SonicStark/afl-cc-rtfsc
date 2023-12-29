@@ -311,7 +311,7 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   process_params(argc, argv);
 
-  add_misc_flags(aflcc);
+  add_misc_args(aflcc);
 
   add_sanitizers(aflcc, envp);
 

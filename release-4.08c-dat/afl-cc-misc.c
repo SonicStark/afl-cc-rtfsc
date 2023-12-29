@@ -1,6 +1,6 @@
 #include "afl-cc.h"
 
-void add_misc_flags(aflcc_state_t *aflcc) {
+void add_misc_args(aflcc_state_t *aflcc) {
 
   if (!aflcc->have_pic) { INSERT_PARAM(aflcc, "-fPIC"); }
 
