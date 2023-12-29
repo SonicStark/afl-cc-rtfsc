@@ -247,6 +247,8 @@ void add_lsan_ctrl(aflcc_state_t *);
 param_st handle_fsanitize(aflcc_state_t *, u8 *cur_argv, u8 scan);
 void add_sanitizers(aflcc_state_t *, char **envp);
 
+void add_misc_flags(aflcc_state_t *);
+
 void add_no_builtin(aflcc_state_t *);
 void add_assembler(aflcc_state_t *);
 void add_gcc_plugin(aflcc_state_t *);
