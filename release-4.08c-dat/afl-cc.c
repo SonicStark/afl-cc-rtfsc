@@ -2,11 +2,7 @@
 
 static void process_params(u32 argc, char **argv) {
 
-  if (cc_par_cnt + argc >= MAX_PARAMS_NUM) {
-
-    FATAL("Too many command line parameters, please increase MAX_PARAMS_NUM.");
-
-  }
+  LIMIT_PARAMS(cc, argc);
 
   if (lto_mode && argc > 1) {
 

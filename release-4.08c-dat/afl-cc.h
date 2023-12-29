@@ -165,6 +165,15 @@ u8 *find_object(aflcc_state_t *, u8 *obj);
 
 void find_built_deps(aflcc_state_t *);
 
+#define LIMIT_PARAMS(cc, add)                                       \
+  do {                                                              \
+                                                                    \
+    if (cc->cc_par_cnt + add >= MAX_PARAMS_NUM)                     \
+      FATAL("Too many command line parameters, "                    \
+            "please increase MAX_PARAMS_NUM.");                     \
+                                                                    \
+  } while (0)
+
 #define INSERT_PARAM(cc, pa)                                        \
   do {                                                              \
                                                                     \
