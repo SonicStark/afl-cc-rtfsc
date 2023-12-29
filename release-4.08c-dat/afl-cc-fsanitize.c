@@ -111,7 +111,7 @@ param_st handle_fsanitize(aflcc_state_t *aflcc, u8 *cur_argv, u8 scan) {
     }
 
   } else if (!strncmp(cur_argv, "-fsanitize=", strlen("-fsanitize=")) &&
-      strchr(cur_argv, ',') &&  !strchr(cur_argv, '=,')) { // avoid OOB errors
+      strchr(cur_argv, ',') && !strstr(cur_argv, "=,")) { // avoid OOB errors
 
     if (scan) {
 
