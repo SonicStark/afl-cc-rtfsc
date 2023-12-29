@@ -1,53 +1,58 @@
 #include "afl-cc.h"
 
-static void process_params(u32 argc, char **argv) {
+/* Process params passed to main()
+  - If scan is true, it only reads them and set some variables in aflcc.
+  - Otherwise it reads each param, decides to keep or drop it. */
+static void process_params(aflcc_state_t *aflcc, u8 scan,
+                            u32 argc, char **argv) {
 
-  LIMIT_PARAMS(cc, argc);
+  LIMIT_PARAMS(aflcc, argc);
 
   // for (u32 x = 0; x < argc; ++x) fprintf(stderr, "[%u] %s\n", x, argv[x]);
 
   /* Process the argument list. */
 
   u8 skip_next = 0;
+
   while (--argc) {
 
     u8 *cur = *(++argv);
 
-    if (skip_next) {
+    if (skip_next > 0) {
 
-      skip_next = 0;
+      skip_next--;
       continue;
 
     }
 
-    handle_misc_args(aflcc, cur, 0); // FIXME
-    handle_misc_args(aflcc, cur, 1); // FIXME
+    if (PARAM_MISS != handle_misc_args(aflcc, cur, scan))
+      continue;
+    
+    if (PARAM_MISS != handle_fsanitize(aflcc, cur, scan))
+      continue;
 
-    handle_linking_args(aflcc, cur, 0, &skip_next, argv); // FIXME
-    handle_linking_args(aflcc, cur, 1, &skip_next, argv); // FIXME
-
-    handle_fsanitize(aflcc, cur, 0); // FIXME
-    handle_fsanitize(aflcc, cur, 1); // FIXME
-
-
+    if (PARAM_MISS != handle_linking_args(aflcc, cur, scan, 
+                                          &skip_next, argv))
+      continue;
 
     if (*cur == '@') {
 
-      // response file support.
-      // we have two choices - move everything to the command line or
-      // rewrite the response files to temporary files and delete them
-      // afterwards. We choose the first for easiness.
-      // We do *not* support quotes in the rsp files to cope with spaces in
-      // filenames etc! If you need that then send a patch!
+      /* response file support
+       we have two choices - move everything to the command line or
+       rewrite the response files to temporary files and delete them
+       afterwards. We choose the first for easiness.
+       We do *not* support quotes in the rsp files to cope with spaces in
+       filenames etc! If you need that then send a patch! */
+
       u8 *filename = cur + 1;
-      if (debug) { DEBUGF("response file=%s\n", filename); }
+      if (aflcc->debug) { DEBUGF("response file=%s\n", filename); }
       FILE       *f = fopen(filename, "r");
       struct stat st;
 
       // Check not found or empty? let the compiler complain if so.
       if (!f || fstat(fileno(f), &st) < 0 || st.st_size < 1) {
 
-        cc_params[cc_par_cnt++] = cur;
+        if (!scan) INSERT_PARAM(aflcc, cur);
         continue;
 
       }
@@ -138,16 +143,23 @@ static void process_params(u32 argc, char **argv) {
 
       }
 
-      if (count) { process_params(count, args); }
+      if (count) { process_params(aflcc, scan, count, args); }
 
-      // we cannot free args[]
+      // we cannot free args[] unless we don't need
+      // to keep any reference in cc_params
+      if (scan) {
+        if (count)
+          do { free(args[--count]); } while (count);
+        free(args);
+      }
       free(tmpbuf);
 
       continue;
 
     }
 
-    cc_params[cc_par_cnt++] = cur;
+    if (!scan)
+      INSERT_PARAM(aflcc, cur);
 
   }
 
@@ -267,9 +279,7 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
   }
 
-  /* Inspect the command line parameters. */
-
-  process_params(argc, argv);
+  process_params(aflcc, 0, argc, argv);
 
   add_misc_args(aflcc);
 
@@ -318,6 +328,8 @@ int main(int argc, char **argv, char **envp) {
   instrument_mode_by_environ(aflcc);
 
   mode_final_checkout(aflcc, argc, argv);
+
+  process_params(aflcc, 1, argc, argv);
 
   maybe_show_help(aflcc, argc, argv);
 
