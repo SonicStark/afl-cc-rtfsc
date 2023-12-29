@@ -70,21 +70,35 @@ void set_real_argv0(aflcc_state_t *aflcc) {
 
 void compiler_mode_by_callname(aflcc_state_t *aflcc) {
 
-#if (LLVM_MAJOR >= 3)
-
   if (strncmp(aflcc->callname, "afl-clang-fast", 14) == 0) {
 
+    /* afl-clang-fast is always created there by makefile
+      just like afl-clang, burdened with special purposes:
+      - If llvm-config is not available (i.e. LLVM_MAJOR is 0),
+        or too old, it falls back to LLVM-NATIVE mode and let 
+        the actual compiler complain if doesn't work.
+      - Otherwise try default llvm instruments except LTO.
+    */
+#if (LLVM_MAJOR >= 3)
     aflcc->compiler_mode = LLVM;
+#else
+    aflcc->compiler_mode = CLANG;
+#endif
 
-  } else if (strncmp(aflcc->callname, "afl-clang-lto", 13) == 0 ||
+  } else
 
-             strncmp(aflcc->callname, "afl-lto", 7) == 0) {
+#if (LLVM_MAJOR >= 3)
+
+      if (strncmp(aflcc->callname, "afl-clang-lto", 13) == 0 ||
+
+          strncmp(aflcc->callname, "afl-lto", 7) == 0) {
 
     aflcc->compiler_mode = LTO;
 
   } else
 
 #endif
+
       if (strncmp(aflcc->callname, "afl-gcc-fast", 12) == 0 ||
 
           strncmp(aflcc->callname, "afl-g++-fast", 12) == 0) {
@@ -624,17 +638,6 @@ void mode_final_checkout(aflcc_state_t *aflcc, int argc, char **argv) {
 
   }
 
-  /* if our PCGUARD implementation is not available then silently switch to
-     native LLVM PCGUARD */
-  if (aflcc->compiler_mode == CLANG &&
-      (aflcc->instrument_mode == INSTRUMENT_DEFAULT ||
-       aflcc->instrument_mode == INSTRUMENT_PCGUARD) &&
-      !aflcc->have_optimized_pcguard) {
-
-    aflcc->instrument_mode = INSTRUMENT_LLVMNATIVE;
-
-  }
-
   if (aflcc->compiler_mode == GCC) {
 
     aflcc->instrument_mode = INSTRUMENT_GCC;
@@ -643,8 +646,20 @@ void mode_final_checkout(aflcc_state_t *aflcc, int argc, char **argv) {
 
   if (aflcc->compiler_mode == CLANG) {
 
-    aflcc->instrument_mode = INSTRUMENT_CLANG;
-    setenv(CLANG_ENV_VAR, "1", 1);  // used by afl-as
+    /* if our PCGUARD implementation is not available then silently switch to
+     native LLVM PCGUARD. Or classic asm instrument is explicitly preferred. */
+    if (!aflcc->have_optimized_pcguard &&
+        (aflcc->instrument_mode == INSTRUMENT_DEFAULT ||
+         aflcc->instrument_mode == INSTRUMENT_PCGUARD)) {
+
+      aflcc->instrument_mode = INSTRUMENT_LLVMNATIVE;
+
+    } else {
+
+      aflcc->instrument_mode = INSTRUMENT_CLANG;
+      setenv(CLANG_ENV_VAR, "1", 1);  // used by afl-as
+
+    }
 
   }
 

@@ -312,76 +312,13 @@ static void edit_params(aflcc_state_t *aflcc, u32 argc, char **argv, char **envp
 
     } else {
 
-      if (instrument_mode == INSTRUMENT_PCGUARD) {
+      if (aflcc->instrument_mode == INSTRUMENT_PCGUARD) {
 
-#if LLVM_MAJOR >= 13
-  #if defined __ANDROID__ || ANDROID
-        cc_params[cc_par_cnt++] = "-fsanitize-coverage=trace-pc-guard";
-        instrument_mode = INSTRUMENT_LLVMNATIVE;
-  #else
-        if (have_instr_list) {
+        add_optimized_pcguard(aflcc);
 
-          if (!be_quiet)
-            SAYF(
-                "Using unoptimized trace-pc-guard, due usage of "
-                "-fsanitize-coverage-allow/denylist, you can use "
-                "AFL_LLVM_ALLOWLIST/AFL_LLMV_DENYLIST instead.\n");
-          cc_params[cc_par_cnt++] = "-fsanitize-coverage=trace-pc-guard";
-          instrument_mode = INSTRUMENT_LLVMNATIVE;
+      } else if (aflcc->instrument_mode == INSTRUMENT_LLVMNATIVE) {
 
-        } else {
-
-    #if LLVM_MAJOR >= 13                            /* use new pass manager */
-      #if LLVM_MAJOR < 16
-          cc_params[cc_par_cnt++] = "-fexperimental-new-pass-manager";
-      #endif
-          cc_params[cc_par_cnt++] = alloc_printf(
-              "-fpass-plugin=%s/SanitizerCoveragePCGUARD.so", obj_path);
-    #else
-          cc_params[cc_par_cnt++] = "-Xclang";
-          cc_params[cc_par_cnt++] = "-load";
-          cc_params[cc_par_cnt++] = "-Xclang";
-          cc_params[cc_par_cnt++] =
-              alloc_printf("%s/SanitizerCoveragePCGUARD.so", obj_path);
-    #endif
-
-        }
-
-  #endif
-#else
-  #if LLVM_MAJOR >= 4
-        if (!be_quiet)
-          SAYF(
-              "Using unoptimized trace-pc-guard, upgrade to LLVM 13+ for "
-              "enhanced version.\n");
-        cc_params[cc_par_cnt++] = "-fsanitize-coverage=trace-pc-guard";
-        instrument_mode = INSTRUMENT_LLVMNATIVE;
-  #else
-        FATAL("pcguard instrumentation requires LLVM 4.0.1+");
-  #endif
-#endif
-
-      } else if (instrument_mode == INSTRUMENT_LLVMNATIVE) {
-
-#if LLVM_MAJOR >= 4
-        if (instrument_opt_mode & INSTRUMENT_OPT_CODECOV) {
-
-  #if LLVM_MAJOR >= 6
-          cc_params[cc_par_cnt++] =
-              "-fsanitize-coverage=trace-pc-guard,bb,no-prune,pc-table";
-  #else
-          FATAL("pcguard instrumentation with pc-table requires LLVM 6.0.1+");
-  #endif
-
-        } else {
-
-          cc_params[cc_par_cnt++] = "-fsanitize-coverage=trace-pc-guard";
-
-        }
-
-#else
-        FATAL("pcguard instrumentation requires LLVM 4.0.1+");
-#endif
+        add_native_pcguard(aflcc);
 
       } else {
 

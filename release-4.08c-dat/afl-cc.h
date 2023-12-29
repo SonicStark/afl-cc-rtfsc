@@ -251,6 +251,8 @@ void add_no_builtin(aflcc_state_t *);
 void add_assembler(aflcc_state_t *);
 void add_gcc_plugin(aflcc_state_t *);
 void add_lto_passes(aflcc_state_t *);
+void add_optimized_pcguard(aflcc_state_t *);
+void add_native_pcguard(aflcc_state_t *);
 
 /* linking */
 
