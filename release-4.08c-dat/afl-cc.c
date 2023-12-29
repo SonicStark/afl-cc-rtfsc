@@ -341,7 +341,7 @@ int main(int argc, char **argv, char **envp) {
   edit_params(aflcc, argc, argv, envp);
 
   if (aflcc->debug) 
-    debugf_args((s32)aflcc->cc_par_cnt, aflcc->cc_params);
+    debugf_args((s32)aflcc->cc_par_cnt, (char **)aflcc->cc_params);
 
   if (aflcc->passthrough) {
 
