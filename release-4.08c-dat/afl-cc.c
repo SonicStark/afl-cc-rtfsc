@@ -38,38 +38,11 @@ static void process_params(u32 argc, char **argv) {
     if (cur[0] != '-') { non_dash = 1; }
     if (!strncmp(cur, "--afl", 5)) continue;
 
-    if (lto_mode && !strncmp(cur, "-flto=thin", 10)) {
-
-      FATAL(
-          "afl-clang-lto cannot work with -flto=thin. Switch to -flto=full or "
-          "use afl-clang-fast!");
-
-    }
-
-    if (lto_mode && !strncmp(cur, "-fuse-ld=", 9)) continue;
-    if (lto_mode && !strncmp(cur, "--ld-path=", 10)) continue;
     if (!strncmp(cur, "-fno-unroll", 11)) continue;
-    if (strstr(cur, "afl-compiler-rt") || strstr(cur, "afl-llvm-rt")) continue;
-    if (!strcmp(cur, "-Wl,-z,defs") || !strcmp(cur, "-Wl,--no-undefined") ||
-        !strcmp(cur, "--no-undefined")) {
 
-      continue;
-
-    }
 
     if (compiler_mode == GCC_PLUGIN && !strcmp(cur, "-pipe")) { continue; }
 
-    if (!strcmp(cur, "-z") || !strcmp(cur, "-Wl,-z")) {
-
-      u8 *param = *(argv + 1);
-      if (!strcmp(param, "defs") || !strcmp(param, "-Wl,defs")) {
-
-        skip_next = 1;
-        continue;
-
-      }
-
-    }
 
     if ((compiler_mode == GCC || compiler_mode == GCC_PLUGIN) &&
         !strncmp(cur, "-stdlib=", 8)) {
@@ -78,6 +51,9 @@ static void process_params(u32 argc, char **argv) {
       continue;
 
     }
+
+    handle_linking_args(aflcc, cur, 0, &skip_next, argv); // FIXME
+    handle_linking_args(aflcc, cur, 1, &skip_next, argv); // FIXME
 
     handle_fsanitize(aflcc, cur, 0); // FIXME
     handle_fsanitize(aflcc, cur, 1); // FIXME
@@ -90,14 +66,10 @@ static void process_params(u32 argc, char **argv) {
 
     if (!strcmp(cur, "-x")) x_set = 1;
     if (!strcmp(cur, "-E")) preprocessor_only = 1;
-    if (!strcmp(cur, "-shared")) shared_linking = 1;
-    if (!strcmp(cur, "-dynamiclib")) shared_linking = 1;
+
+
     if (!strcmp(cur, "--target=wasm32-wasi")) passthrough = 1;
-    if (!strcmp(cur, "-Wl,-r")) partial_linking = 1;
-    if (!strcmp(cur, "-Wl,-i")) partial_linking = 1;
-    if (!strcmp(cur, "-Wl,--relocatable")) partial_linking = 1;
-    if (!strcmp(cur, "-r")) partial_linking = 1;
-    if (!strcmp(cur, "--relocatable")) partial_linking = 1;
+
     if (!strcmp(cur, "-c")) have_c = 1;
 
     if (!strncmp(cur, "-O", 2)) have_o = 1;

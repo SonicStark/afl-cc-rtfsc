@@ -1,5 +1,113 @@
 #include "afl-cc.h"
 
+param_st handle_linking_args(aflcc_state_t *aflcc, u8 *cur_argv, u8 scan, 
+                              u8 *skip_next, char **argv) {
+
+  if (aflcc->lto_mode && !strncmp(cur_argv, "-flto=thin", 10)) {
+
+    FATAL(
+        "afl-clang-lto cannot work with -flto=thin. Switch to -flto=full or "
+        "use afl-clang-fast!");
+
+  }
+
+  param_st final_ = PARAM_MISS;
+
+  if (!strcmp(cur_argv, "-shared") ||
+      !strcmp(cur_argv, "-dynamiclib")) {
+
+    if (scan) {
+
+      aflcc->shared_linking = 1;
+      final_ = PARAM_SCAN;
+
+    } else {
+
+      final_ = PARAM_ORIG;
+
+    }
+  
+  } else if (
+      !strcmp(cur_argv, "-Wl,-r") ||
+      !strcmp(cur_argv, "-Wl,-i") ||
+      !strcmp(cur_argv, "-Wl,--relocatable") ||
+      !strcmp(cur_argv, "-r") ||
+      !strcmp(cur_argv, "--relocatable")) {
+
+    if (scan) {
+
+      aflcc->partial_linking = 1;
+      final_ = PARAM_SCAN;
+
+    } else {
+
+      final_ = PARAM_ORIG;
+
+    }
+
+  } else if (
+      !strncmp(cur_argv, "-fuse-ld=", 9) ||
+      !strncmp(cur_argv, "--ld-path=", 10)) {
+
+    if (scan) {
+
+      final_ = PARAM_SCAN;
+
+    } else {
+
+      if (aflcc->lto_mode)
+        final_ = PARAM_DROP;
+      else
+        final_ = PARAM_ORIG;
+
+    }
+  
+  } else if (
+      !strcmp(cur_argv, "-Wl,-z,defs") || 
+      !strcmp(cur_argv, "-Wl,--no-undefined") ||
+      !strcmp(cur_argv, "--no-undefined") ||
+      strstr(cur_argv, "afl-compiler-rt") || 
+      strstr(cur_argv, "afl-llvm-rt")) {
+
+    if (scan) {
+
+      final_ = PARAM_SCAN;
+
+    } else {
+
+      final_ = PARAM_DROP;
+
+    }
+  
+  } else if (
+      !strcmp(cur_argv, "-z") || 
+      !strcmp(cur_argv, "-Wl,-z")) {
+
+    if (scan) {
+
+      final_ = PARAM_SCAN;
+
+    } else {
+
+      u8 *param = *(argv + 1);
+      if (!strcmp(param, "defs") || !strcmp(param, "-Wl,defs")) {
+
+        *skip_next = 1;
+        final_ = PARAM_DROP;
+
+      }
+
+    }
+
+  }
+
+  if (final_ == PARAM_ORIG)
+    INSERT_PARAM(aflcc, cur_argv);
+  
+  return final_;
+
+}
+
 static void add_aflpplib(aflcc_state_t *aflcc) {
 
   if (!aflcc->need_aflpplib) return;
