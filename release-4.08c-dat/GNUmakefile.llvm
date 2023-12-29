@@ -360,6 +360,8 @@ endif
 
 LLVM_MIN_4_0_1 = $(shell awk 'function tonum(ver, a) {split(ver,a,"."); return a[1]*1000000+a[2]*1000+a[3]} BEGIN { exit tonum(ARGV[1]) >= tonum(ARGV[2]) }' $(LLVMVER) 4.0.1; echo $$?)
 
+AFL_CC_FILES = $(wildcard src/afl-cc*.c)
+
 .PHONY: all
 all: $(TARGETS)
 
@@ -398,8 +400,8 @@ endif
 instrumentation/afl-common.o: ./src/afl-common.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@ $(LDFLAGS)
 
-./afl-cc: include/afl-cc.h src/afl-cc.c src/afl-cc-tools.c src/afl-cc-preprocess.c src/afl-cc-mode.c src/afl-cc-misc.c src/afl-cc-link.c src/afl-cc-help.c src/afl-cc-fsanitize.c src/afl-cc-ext.c instrumentation/afl-common.o
-	$(CC) $(CLANG_CFL) $(CFLAGS) $(CPPFLAGS) $< instrumentation/afl-common.o -o $@ -DLLVM_MINOR=$(LLVM_MINOR) -DLLVM_MAJOR=$(LLVM_MAJOR) $(LDFLAGS) -DCFLAGS_OPT=\"$(CFLAGS_OPT)\" -lm
+./afl-cc: include/afl-cc.h $(AFL_CC_FILES) instrumentation/afl-common.o
+	$(CC) $(CLANG_CFL) $(CFLAGS) $(CPPFLAGS) $(AFL_CC_FILES) instrumentation/afl-common.o -o $@ -DLLVM_MINOR=$(LLVM_MINOR) -DLLVM_MAJOR=$(LLVM_MAJOR) $(LDFLAGS) -DCFLAGS_OPT=\"$(CFLAGS_OPT)\" -lm
 	@ln -sf afl-cc ./afl-c++
 	@ln -sf afl-cc ./afl-gcc
 	@ln -sf afl-cc ./afl-g++
