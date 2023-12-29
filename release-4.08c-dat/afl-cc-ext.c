@@ -30,7 +30,7 @@ void add_assembler(aflcc_state_t *aflcc) {
   if (slash) *slash = 0;
 
   insert_param(aflcc, "-B");
-  insert_param(aflcc, "afl_as");
+  insert_param(aflcc, afl_as);
 
   if (aflcc->compiler_mode == CLANG)
     insert_param(aflcc, "-no-integrated-as");
