@@ -39,8 +39,6 @@ void add_assembler(aflcc_state_t *aflcc) {
 
 void add_gcc_plugin(aflcc_state_t *aflcc) {
 
-  char *fplugin_arg;
-
   if (aflcc->cmplog_mode) {
 
     insert_object(aflcc, "afl-gcc-cmplog-pass.so", "-fplugin=%s", 0);
