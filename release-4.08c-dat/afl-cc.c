@@ -4,17 +4,6 @@ static void process_params(u32 argc, char **argv) {
 
   LIMIT_PARAMS(cc, argc);
 
-  if (lto_mode && argc > 1) {
-
-    u32 idx;
-    for (idx = 1; idx < argc; idx++) {
-
-      if (!strncasecmp(argv[idx], "-fpic", 5)) have_pic = 1;
-
-    }
-
-  }
-
   // for (u32 x = 0; x < argc; ++x) fprintf(stderr, "[%u] %s\n", x, argv[x]);
 
   /* Process the argument list. */
@@ -31,22 +20,8 @@ static void process_params(u32 argc, char **argv) {
 
     }
 
-    if (cur[0] != '-') { non_dash = 1; }
-    if (!strncmp(cur, "--afl", 5)) continue;
-
-    if (!strncmp(cur, "-fno-unroll", 11)) continue;
-
-
-    if (compiler_mode == GCC_PLUGIN && !strcmp(cur, "-pipe")) { continue; }
-
-
-    if ((compiler_mode == GCC || compiler_mode == GCC_PLUGIN) &&
-        !strncmp(cur, "-stdlib=", 8)) {
-
-      if (!be_quiet) { WARNF("Found '%s' - stripping!", cur); }
-      continue;
-
-    }
+    handle_misc_args(aflcc, cur, 0); // FIXME
+    handle_misc_args(aflcc, cur, 1); // FIXME
 
     handle_linking_args(aflcc, cur, 0, &skip_next, argv); // FIXME
     handle_linking_args(aflcc, cur, 1, &skip_next, argv); // FIXME
@@ -54,22 +29,7 @@ static void process_params(u32 argc, char **argv) {
     handle_fsanitize(aflcc, cur, 0); // FIXME
     handle_fsanitize(aflcc, cur, 1); // FIXME
 
-    if (!strcmp(cur, "-m32")) bit_mode = 32;
-    if (!strcmp(cur, "armv7a-linux-androideabi")) bit_mode = 32;
-    if (!strcmp(cur, "-m64")) bit_mode = 64;
 
-    if (strstr(cur, "FORTIFY_SOURCE")) fortify_set = 1;
-
-    if (!strcmp(cur, "-x")) x_set = 1;
-    if (!strcmp(cur, "-E")) preprocessor_only = 1;
-
-
-    if (!strcmp(cur, "--target=wasm32-wasi")) passthrough = 1;
-
-    if (!strcmp(cur, "-c")) have_c = 1;
-
-    if (!strncmp(cur, "-O", 2)) have_o = 1;
-    if (!strncmp(cur, "-funroll-loop", 13)) have_unroll = 1;
 
     if (*cur == '@') {
 
