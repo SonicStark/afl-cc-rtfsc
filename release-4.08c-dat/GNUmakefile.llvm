@@ -398,7 +398,7 @@ endif
 instrumentation/afl-common.o: ./src/afl-common.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@ $(LDFLAGS)
 
-./afl-cc: src/afl-cc.c instrumentation/afl-common.o
+./afl-cc: include/afl-cc.h src/afl-cc.c src/afl-cc-tools.c src/afl-cc-preprocess.c src/afl-cc-mode.c src/afl-cc-misc.c src/afl-cc-link.c src/afl-cc-help.c src/afl-cc-fsanitize.c src/afl-cc-ext.c instrumentation/afl-common.o
 	$(CC) $(CLANG_CFL) $(CFLAGS) $(CPPFLAGS) $< instrumentation/afl-common.o -o $@ -DLLVM_MINOR=$(LLVM_MINOR) -DLLVM_MAJOR=$(LLVM_MAJOR) $(LDFLAGS) -DCFLAGS_OPT=\"$(CFLAGS_OPT)\" -lm
 	@ln -sf afl-cc ./afl-c++
 	@ln -sf afl-cc ./afl-gcc
